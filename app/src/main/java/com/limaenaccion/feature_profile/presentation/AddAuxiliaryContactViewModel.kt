@@ -1,10 +1,16 @@
 package com.limaenaccion.feature_profile.presentation
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.limaenaccion.core.data.preferences.PrimaryContactPrefs
+import com.limaenaccion.core.data.preferences.PreferencesRepository
+import com.limaenaccion.core.data.preferences.PreferencesRepositoryImpl
 import com.limaenaccion.feature_profile.data.model.ContactRelationship
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class AddAuxiliaryContactUiState(
     val fullName: String = "",
@@ -18,7 +24,10 @@ data class AddAuxiliaryContactUiState(
         get() = fullName.isNotBlank() && phoneNumber.length >= 6
 }
 
-class AddAuxiliaryContactViewModel : ViewModel() {
+class AddAuxiliaryContactViewModel @JvmOverloads constructor(
+    application: Application,
+    private val preferencesRepository: PreferencesRepository = PreferencesRepositoryImpl(application)
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(AddAuxiliaryContactUiState())
     val uiState: StateFlow<AddAuxiliaryContactUiState> = _uiState.asStateFlow()
@@ -41,9 +50,20 @@ class AddAuxiliaryContactViewModel : ViewModel() {
     }
 
     fun onSaveClicked() {
+        val state = _uiState.value
+        if (!state.isFormValid) return
 
-        if (_uiState.value.isFormValid) {
-            _uiState.value = _uiState.value.copy(contactSaved = true)
+        viewModelScope.launch {
+            // Si el usuario marcó este contacto como principal, se persiste en DataStore (Pref #14)
+            if (state.isPrimaryContact) {
+                preferencesRepository.setPrimaryAuxiliaryContact(
+                    PrimaryContactPrefs(
+                        name = state.fullName,
+                        phoneNumber = state.phoneNumber
+                    )
+                )
+            }
+            _uiState.value = state.copy(contactSaved = true)
         }
     }
 }

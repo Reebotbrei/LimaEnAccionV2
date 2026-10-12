@@ -32,6 +32,15 @@ fun LocationPermissionScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted -> viewModel.onPermissionResult(granted) }
 
+    LaunchedEffect(Unit) {
+        val alreadyGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (alreadyGranted) {
+            viewModel.onPermissionResult(true)
+        }
+    }
+
     LaunchedEffect(uiState) {
         if (uiState == LocationPermissionUiState.GRANTED) onPermissionGranted()
     }
