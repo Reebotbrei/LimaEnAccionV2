@@ -67,6 +67,7 @@ interface PreferencesRepository {
     suspend fun clearPrimaryAuxiliaryContact()
 
     // Pref #15 — Activación SOS por Botón Físico
+    //Antohny lo va hacer por chistoso :v
     val sosPhysicalButtonEnabled: Flow<Boolean>
     suspend fun setSosPhysicalButtonEnabled(enabled: Boolean)
 }

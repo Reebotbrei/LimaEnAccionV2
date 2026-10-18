@@ -1,17 +1,23 @@
 {
-  "name": "backend",
+  "name": "lima-en-accion-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Backend API para el sistema de seguridad ciudadana Lima en Accion",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
-  "keywords": [],
+  "keywords": [
+    "seguridad",
+    "lima",
+    "node",
+    "express"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "cors": "^2.8.6",
+    "cors": "^2.8.5",
     "express": "^5.3.0"
   }
 }

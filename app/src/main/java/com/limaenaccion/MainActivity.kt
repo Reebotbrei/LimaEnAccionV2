@@ -8,12 +8,12 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
+import com.limaenaccion.core.data.network.RetrofitClient
 import com.limaenaccion.core.navigation.NavGraph
 import com.limaenaccion.core.navigation.Screen
 import com.limaenaccion.core.ui.theme.LimaEnAccionTheme
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
 
         splashScreen.setKeepOnScreenCondition { !mainViewModel.isReady }
 
-        // Ejecutar la prueba de conexión con Node.js al arrancar la app
+        // Prueba asíncrona no bloqueante de conexión con el backend
         testBackendConnection()
 
         setContent {
@@ -45,19 +45,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun testBackendConnection() {
-        RetrofitClient.instance.testConnection().enqueue(object : Callback<ApiResponse> {
-            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    Log.d("API_TEST", "¡Éxito total! Mensaje del servidor: ${body?.mensaje}")
-                } else {
-                    Log.e("API_TEST", "Error en la respuesta del servidor: ${response.code()}")
-                }
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.instance.testConnection()
+                Log.d("API_TEST", "¡Éxito total! Mensaje del servidor: ${response.mensaje}")
+            } catch (e: Exception) {
+                Log.w("API_TEST", "Servidor backend no disponible en esta red o puerto: ${e.message}")
             }
-
-            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                Log.e("API_TEST", "Fallo de conexión con el backend: ${t.message}")
-            }
-        })
+        }
     }
 }

@@ -1,16 +1,12 @@
-const express = require('express');
-const cors = require('cors');
-const app = express();
-
-app.use(express.json());
-app.use(cors());
-
-// Ruta de prueba para verificar la conexión con Kotlin
-app.get('/api/test', (req, res) => {
-    res.json({ mensaje: "¡Conexión exitosa entre Kotlin y Node.js!" });
-});
+const app = require('./src/app');
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-    console.log(`Servidor de Node.js corriendo en el puerto ${PORT}`);
+    console.log(`=================================================`);
+    console.log(`🚀 Servidor Lima en Acción corriendo en el puerto ${PORT}`);
+    console.log(`👉 Endpoint de prueba: http://localhost:${PORT}/api/test`);
+    console.log(`👉 Endpoint reportes: http://localhost:${PORT}/api/v1/reportes`);
+    console.log(`👉 Directorio emergencias: http://localhost:${PORT}/api/v1/emergencias/directorio`);
+    console.log(`=================================================`);
 });
