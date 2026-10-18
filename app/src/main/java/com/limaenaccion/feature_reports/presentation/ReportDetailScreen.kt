@@ -1,5 +1,6 @@
 package com.limaenaccion.feature_reports.presentation
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.limaenaccion.core.ui.components.PrimaryButton
@@ -28,9 +30,20 @@ fun ReportDetailsScreen(
     onPublished: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
+    // Navegar automáticamente cuando Firestore confirme que se publicó
     LaunchedEffect(uiState.published) {
-        if (uiState.published) onPublished()
+        if (uiState.published) {
+            onPublished()
+        }
+    }
+
+    // Mostrar mensaje emergente si ocurre un error al subir a Firestore
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { error ->
+            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+        }
     }
 
     Scaffold(
@@ -38,32 +51,75 @@ fun ReportDetailsScreen(
             TopAppBar(
                 title = { Text("Detalles del reporte") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Volver") }
+                    IconButton(onClick = onNavigateBack, enabled = !uiState.isLoading) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
+                    }
                 }
             )
         },
         bottomBar = {
-            PrimaryButton(
-                text = "Publicar reporte",
-                onClick = viewModel::onPublishClicked,
-                enabled = uiState.isDescriptionValid,
-                modifier = Modifier.padding(16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                PrimaryButton(
+                    text = if (uiState.isLoading) "Publicando..." else "Publicar reporte",
+                    onClick = { viewModel.onPublishClicked() },
+                    enabled = uiState.isDescriptionValid && !uiState.isLoading,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Indicador circular si está subiendo datos
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.5.dp
+                    )
+                }
+            }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+        ) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                Row(modifier = Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.Image,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("foto_incidente.jpg", style = MaterialTheme.typography.bodyMedium)
-                        Text("${uiState.photoSizeMb} MB · hace unos segundos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "${uiState.photoSizeMb} MB · hace unos segundos",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.Close, contentDescription = "Quitar foto", tint = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = onNavigateBack, enabled = !uiState.isLoading) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Quitar foto",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             }
@@ -74,7 +130,10 @@ fun ReportDetailsScreen(
             OutlinedTextField(
                 value = uiState.description,
                 onValueChange = viewModel::onDescriptionChange,
-                placeholder = { Text("Describe brevemente lo que ocurrió, características de los involucrados, vehículos, etc.") },
+                enabled = !uiState.isLoading,
+                placeholder = {
+                    Text("Describe brevemente lo que ocurrió, características de los involucrados, vehículos, etc.")
+                },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -84,26 +143,49 @@ fun ReportDetailsScreen(
                 shape = RoundedCornerShape(12.dp),
                 color = if (uiState.hasVoiceNote) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                onClick = viewModel::onToggleVoiceNote
+                onClick = { if (!uiState.isLoading) viewModel.onToggleVoiceNote() }
             ) {
-                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.Mic,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
                             if (uiState.hasVoiceNote) "Nota de voz agregada" else "Agregar nota de voz",
-                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                        Text("Máximo 60 segundos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Máximo 60 segundos",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(uiState.location, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    uiState.location,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

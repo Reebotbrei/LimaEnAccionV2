@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
 
         splashScreen.setKeepOnScreenCondition { !mainViewModel.isReady }
 
-        // Ejecutar la prueba de conexión con Node.js al arrancar la app
+        // Probar backend en Node.js
         testBackendConnection()
 
         setContent {
