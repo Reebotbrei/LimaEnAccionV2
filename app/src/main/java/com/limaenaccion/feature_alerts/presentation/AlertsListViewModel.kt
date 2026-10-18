@@ -1,19 +1,21 @@
 package com.limaenaccion.feature_alerts.presentation
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.util.UiState
 import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.data.repository.IncidentRepository
-import com.limaenaccion.feature_alerts.data.repository.MockIncidentRepository
+import com.limaenaccion.feature_alerts.data.repository.IncidentRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AlertsListViewModel(
-    private val repository: IncidentRepository = MockIncidentRepository()
-) : ViewModel() {
+class AlertsListViewModel @JvmOverloads constructor(
+    application: Application,
+    private val repository: IncidentRepository = IncidentRepositoryImpl(application)
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<UiState<List<Incident>>>(UiState.Loading)
     val uiState: StateFlow<UiState<List<Incident>>> = _uiState.asStateFlow()

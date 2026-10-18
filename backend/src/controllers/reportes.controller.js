@@ -55,7 +55,7 @@ exports.crearReporte = (req, res) => {
         // Persistir en disco en reportes.json
         const reporteGuardado = reportesStore.guardarNuevo(nuevoReporte);
 
-        console.log(`[BACKEND] ✅ Nuevo reporte persistido en disco: ${reporteGuardado.id} - ${reporteGuardado.titulo}`);
+        console.log(`[BACKEND] Nuevo reporte persistido en disco: ${reporteGuardado.id} - ${reporteGuardado.titulo}`);
 
         res.status(201).json({
             status: "success",
