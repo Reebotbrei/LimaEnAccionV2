@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ReporteDao {
 
-    // US-06: Caducidad de pines a las 12 horas en SQLite
+    // US-06: Caducidad de pines a las 12 horas en SQLite (reactivo con Flow)
     @Query("SELECT * FROM reporte_cache WHERE venceEn > :ahora ORDER BY creadoEn DESC")
     fun observarVigentes(ahora: Long): Flow<List<ReporteEntity>>
 
@@ -18,14 +18,14 @@ interface ReporteDao {
     fun observarTodos(): Flow<List<ReporteEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertar(reporte: ReporteEntity): Long
+    fun insertar(reporte: ReporteEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertarTodos(reportes: List<ReporteEntity>): List<Long>
+    fun insertarTodos(reportes: List<ReporteEntity>)
 
     @Query("SELECT * FROM reporte_cache WHERE id = :id")
-    suspend fun obtenerPorId(id: String): ReporteEntity?
+    fun obtenerPorId(id: String): ReporteEntity?
 
     @Query("DELETE FROM reporte_cache WHERE id = :id")
-    suspend fun eliminarPorId(id: String): Int
+    fun eliminarPorId(id: String): Int
 }

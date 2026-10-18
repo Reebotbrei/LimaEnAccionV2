@@ -132,7 +132,9 @@ class ReportViewModel @JvmOverloads constructor(
                     estado = "EN_REVISION",
                     esSos = false
                 )
-                reporteDao.insertar(entity)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    reporteDao.insertar(entity)
+                }
                 Log.d("LIMA_ROOM", "✅ [SQLITE ROOM] Reporte guardado en la caché local del celular: $reporteIdFinal")
             } catch (e: Exception) {
                 Log.e("LIMA_ROOM", "❌ [SQLITE ROOM] Error al guardar en SQLite: ${e.message}")
