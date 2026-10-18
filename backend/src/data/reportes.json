@@ -1,0 +1,30 @@
+[
+  {
+    "id": "rep_1001",
+    "usuarioId": "usr_demo_01",
+    "tipo": "ROBO",
+    "titulo": "Robo al paso cerca al Mercado",
+    "descripcion": "Sujeto a bordo de motocicleta lineal sin placa arrebató pertenencias.",
+    "latitud": -12.019542,
+    "longitud": -77.014231,
+    "fotoUrl": null,
+    "estado": "EN_REVISION",
+    "esSos": false,
+    "creadoEn": "2026-10-18T10:00:00.000Z",
+    "venceEn": "2026-10-18T22:00:00.000Z"
+  },
+  {
+    "id": "rep_1002",
+    "usuarioId": "usr_demo_02",
+    "tipo": "SOSPECHOSO",
+    "titulo": "Merodeador en exteriores de estación",
+    "descripcion": "Sujeto vigilando vehículos estacionados en actitud sospechosa.",
+    "latitud": -12.01821,
+    "longitud": -77.0135,
+    "fotoUrl": null,
+    "estado": "VERIFICADO",
+    "esSos": false,
+    "creadoEn": "2026-10-18T10:30:00.000Z",
+    "venceEn": "2026-10-18T22:30:00.000Z"
+  }
+]

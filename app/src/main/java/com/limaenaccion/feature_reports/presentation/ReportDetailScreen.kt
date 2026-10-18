@@ -44,9 +44,9 @@ fun ReportDetailsScreen(
         },
         bottomBar = {
             PrimaryButton(
-                text = "Publicar reporte",
+                text = if (uiState.isPublishing) "Guardando en servidor..." else "Publicar reporte",
                 onClick = viewModel::onPublishClicked,
-                enabled = uiState.isDescriptionValid,
+                enabled = uiState.isDescriptionValid && !uiState.isPublishing,
                 modifier = Modifier.padding(16.dp)
             )
         }
