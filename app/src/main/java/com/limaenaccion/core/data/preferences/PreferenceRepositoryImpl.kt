@@ -29,8 +29,6 @@ class PreferencesRepositoryImpl(private val context: Context) : PreferencesRepos
         val HORA_INICIO = intPreferencesKey("hora_inicio")
         val HORA_FIN = intPreferencesKey("hora_fin")
         val ANULAR_SILENCIO_SOS = booleanPreferencesKey("anular_silencio_sos")
-        val PRIMARY_CONTACT_NAME = stringPreferencesKey("primary_contact_name")
-        val PRIMARY_CONTACT_PHONE = stringPreferencesKey("primary_contact_phone")
         val SOS_PHYSICAL_BUTTON_ENABLED = booleanPreferencesKey("sos_physical_button_enabled")
     }
 
@@ -123,31 +121,14 @@ class PreferencesRepositoryImpl(private val context: Context) : PreferencesRepos
         context.dataStore.edit { prefs -> prefs[Keys.ANULAR_SILENCIO_SOS] = override }
     }
 
-    override val primaryAuxiliaryContact: Flow<PrimaryContactPrefs?> =
-        context.dataStore.data.map { prefs ->
-            val name = prefs[Keys.PRIMARY_CONTACT_NAME]
-            val phone = prefs[Keys.PRIMARY_CONTACT_PHONE]
-            if (name != null && phone != null) PrimaryContactPrefs(name, phone) else null
-        }
-
-    override suspend fun setPrimaryAuxiliaryContact(contact: PrimaryContactPrefs) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.PRIMARY_CONTACT_NAME] = contact.name
-            prefs[Keys.PRIMARY_CONTACT_PHONE] = contact.phoneNumber
-        }
-    }
-
-    override suspend fun clearPrimaryAuxiliaryContact() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(Keys.PRIMARY_CONTACT_NAME)
-            prefs.remove(Keys.PRIMARY_CONTACT_PHONE)
-        }
-    }
-
     override val sosPhysicalButtonEnabled: Flow<Boolean> =
         context.dataStore.data.map { prefs -> prefs[Keys.SOS_PHYSICAL_BUTTON_ENABLED] ?: false }
 
     override suspend fun setSosPhysicalButtonEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.SOS_PHYSICAL_BUTTON_ENABLED] = enabled }
+    }
+
+    override suspend fun clearAllPreferences() {
+        context.dataStore.edit { it.clear() }
     }
 }

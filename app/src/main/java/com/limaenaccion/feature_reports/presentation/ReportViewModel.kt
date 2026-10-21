@@ -2,17 +2,12 @@ package com.limaenaccion.feature_reports.presentation
 
 import android.app.Application
 import android.graphics.Bitmap
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.limaenaccion.core.data.local.AppDatabase
-import com.limaenaccion.core.data.local.dao.ReporteDao
-import com.limaenaccion.core.data.local.entities.ReporteEntity
-import com.limaenaccion.core.data.network.ApiService
-import com.limaenaccion.core.data.network.RetrofitClient
-import com.limaenaccion.core.data.network.model.CreateReportRequest
 import com.limaenaccion.core.util.ImageCompressor
 import com.limaenaccion.feature_reports.data.model.ReportType
+import com.limaenaccion.feature_reports.data.repository.ReportRepository
+import com.limaenaccion.feature_reports.data.repository.ReportRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,15 +23,15 @@ data class ReportUiState(
     val hasVoiceNote: Boolean = false,
     val location: String = "Av Lima 133, Caja de Agua",
     val isPublishing: Boolean = false,
-    val published: Boolean = false
+    val published: Boolean = false,
+    val errorMessage: String? = null
 ) {
     val isDescriptionValid: Boolean get() = description.isNotBlank()
 }
 
 class ReportViewModel @JvmOverloads constructor(
     application: Application,
-    private val apiService: ApiService = RetrofitClient.instance,
-    private val reporteDao: ReporteDao = AppDatabase.getInstance(application).reporteDao()
+    private val reportRepository: ReportRepository = ReportRepositoryImpl(application)
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ReportUiState())
@@ -79,71 +74,42 @@ class ReportViewModel @JvmOverloads constructor(
         _uiState.value = _uiState.value.copy(hasVoiceNote = !_uiState.value.hasVoiceNote)
     }
 
-    // Publicación real: Envía a Node.js Backend por Retrofit y guarda en SQLite con Room
+    // Publicación a través de ReportRepository (Clean Architecture)
     fun onPublishClicked() {
         val state = _uiState.value
         if (!state.isDescriptionValid || state.isPublishing) return
 
-        _uiState.value = state.copy(isPublishing = true)
+        _uiState.value = state.copy(isPublishing = true, errorMessage = null)
 
         viewModelScope.launch {
-            val tipo = state.selectedType?.name ?: "ROBO"
-            val titulo = "Reporte de ${state.selectedType?.label ?: "Incidente"}"
-            val descripcion = state.description
+            val type = state.selectedType ?: ReportType.ROBO
+            val title = "Reporte de ${type.label}"
+            val description = state.description
             val latitud = -12.019542
             val longitud = -77.014231
-            val fotoUrl = state.photoBase64
 
-            var reporteIdFinal = "rep_${System.currentTimeMillis()}"
+            val result = reportRepository.publishReport(
+                type = type,
+                title = title,
+                description = description,
+                latitude = latitud,
+                longitude = longitud,
+                photoBase64 = state.photoBase64
+            )
 
-            // 1. PERSISTENCIA EN EL BACKEND (Node.js por Retrofit)
-            try {
-                val request = CreateReportRequest(
-                    tipo = tipo,
-                    titulo = titulo,
-                    descripcion = descripcion,
-                    latitud = latitud,
-                    longitud = longitud,
-                    fotoUrl = fotoUrl,
-                    esSos = false
-                )
-                val response = apiService.createReport(request)
-                reporteIdFinal = response.data.id
-                Log.d("LIMA_BACKEND", "✅ [BACKEND NODE.JS] Reporte persistido en el servidor exitosamente: $reporteIdFinal")
-            } catch (e: Exception) {
-                Log.w("LIMA_BACKEND", "⚠️ [BACKEND NODE.JS] Servidor no respondió o sin red. Se procederá con guardado local: ${e.message}")
-            }
-
-            // 2. PERSISTENCIA LOCAL EN EL CELULAR (SQLite con Room - US-06 Caducidad 12h)
-            try {
-                val ahora = System.currentTimeMillis()
-                val doceHorasMs = 12 * 60 * 60 * 1000L
-                val entity = ReporteEntity(
-                    id = reporteIdFinal,
-                    usuarioId = "usr_vecino_local",
-                    tipo = tipo,
-                    titulo = titulo,
-                    descripcion = descripcion,
-                    latitud = latitud,
-                    longitud = longitud,
-                    fotoUri = null,
-                    creadoEn = ahora,
-                    venceEn = ahora + doceHorasMs,
-                    estado = "EN_REVISION",
-                    esSos = false
-                )
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    reporteDao.insertar(entity)
+            result.fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(
+                        isPublishing = false,
+                        published = true
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isPublishing = false,
+                        errorMessage = error.message
+                    )
                 }
-                Log.d("LIMA_ROOM", "✅ [SQLITE ROOM] Reporte guardado en la caché local del celular: $reporteIdFinal")
-            } catch (e: Exception) {
-                Log.e("LIMA_ROOM", "❌ [SQLITE ROOM] Error al guardar en SQLite: ${e.message}")
-            }
-
-            // 3. Pasar a la pantalla de éxito
-            _uiState.value = _uiState.value.copy(
-                isPublishing = false,
-                published = true
             )
         }
     }

@@ -13,20 +13,37 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class IncidentRepositoryImpl(
-    private val application: Application,
+    application: Application,
     private val apiService: ApiService = RetrofitClient.instance,
     private val reporteDao: ReporteDao = AppDatabase.getInstance(application).reporteDao(),
-    private val mockRepository: MockIncidentRepository = MockIncidentRepository()
+    private val mockRepository: IncidentRepository = MockIncidentRepository()
 ) : IncidentRepository {
+
+    private fun parseIncidentType(tipo: String): IncidentType {
+        val clean = tipo.trim().uppercase()
+        return when {
+            clean.contains("VANDALISMO") -> IncidentType.VANDALISMO
+            clean.contains("MEDIC") -> IncidentType.EMERGENCIA_MEDICA
+            clean.contains("SOSPECH") -> IncidentType.SOSPECHOSO
+            clean.contains("INCENDIO") -> IncidentType.INCENDIO
+            clean.contains("ACCIDENT") -> IncidentType.ACCIDENTE
+            clean.contains("ROBO") -> IncidentType.ROBO
+            else -> try {
+                IncidentType.valueOf(clean)
+            } catch (e: Exception) {
+                IncidentType.ROBO
+            }
+        }
+    }
 
     override suspend fun getIncidents(): List<Incident> = withContext(Dispatchers.IO) {
         val baseMocks = mockRepository.getIncidents()
 
-        // 1. Sincronizar desde el Backend Node.js hacia la base de datos local SQLite (Room)
+        // 1. Intentar sincronizar desde el backend Node.js
         try {
             val response = apiService.getReports()
-            val backendReports = response.data
-            val entities = backendReports.map { dto ->
+            val remoteReports = response.data
+            val entities = remoteReports.map { dto ->
                 ReporteEntity(
                     id = dto.id,
                     usuarioId = dto.usuarioId,
@@ -58,17 +75,13 @@ class IncidentRepositoryImpl(
 
         // 3. Mapear entidades de SQLite a Incidentes para la UI
         val realIncidents = reportesLocales.map { entity ->
-            val type = try {
-                IncidentType.valueOf(entity.tipo.uppercase())
-            } catch (e: Exception) {
-                IncidentType.ROBO
-            }
+            val type = parseIncidentType(entity.tipo)
 
             Incident(
                 id = entity.id,
                 type = type,
                 title = entity.titulo,
-                description = entity.descripcion ?: "Sin descripción",
+                description = if (!entity.descripcion.isNullOrBlank()) entity.descripcion else "Reporte de ${type.label} registrado en la zona.",
                 reportedBy = "Tú (Vecino)",
                 location = "Caja de Agua, SJL",
                 distanceMeters = 80,
@@ -86,16 +99,12 @@ class IncidentRepositoryImpl(
     override suspend fun getIncidentById(id: String): Incident? = withContext(Dispatchers.IO) {
         val entity = reporteDao.obtenerPorId(id)
         if (entity != null) {
-            val type = try {
-                IncidentType.valueOf(entity.tipo.uppercase())
-            } catch (e: Exception) {
-                IncidentType.ROBO
-            }
+            val type = parseIncidentType(entity.tipo)
             Incident(
                 id = entity.id,
                 type = type,
                 title = entity.titulo,
-                description = entity.descripcion ?: "Sin descripción",
+                description = if (!entity.descripcion.isNullOrBlank()) entity.descripcion else "Reporte de ${type.label} registrado en la zona.",
                 reportedBy = "Tú (Vecino)",
                 location = "Caja de Agua, SJL",
                 distanceMeters = 80,

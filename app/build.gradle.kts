@@ -34,6 +34,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    lint {
+        lintConfig = file("lint.xml")
+        checkReleaseBuilds = false
+        abortOnError = false
+        enable += setOf("TypographyContrast", "ContentDescription", "Accessibility")
+        error += setOf("TypographyContrast", "ContentDescription")
+    }
 }
 
 dependencies {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Reglas estrictas de Accesibilidad y Contraste WCAG AA -->
+    <issue id="Accessibility" severity="error" />
+    <issue id="TypographyContrast" severity="error" />
+    <issue id="ContentDescription" severity="error" />
+    <issue id="ClickableViewAccessibility" severity="warning" />
+    <issue id="HardcodedText" severity="warning" />
+</lint>

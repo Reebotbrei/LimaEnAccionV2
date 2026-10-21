@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.core.util.UiState
 
 @Composable
@@ -20,12 +21,13 @@ fun AlertsListScreen(
     viewModel: AlertsListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
 
     Scaffold(
         topBar = {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Alertas en tu zona", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("San Juan de Lurigancho · Últimas 48h", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(strings.alertsTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(strings.alertsSubtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     ) { paddingValues ->

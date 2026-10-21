@@ -2,22 +2,9 @@ package com.limaenaccion.core.data.preferences
 
 import kotlinx.coroutines.flow.Flow
 
-// Pref #14 - Contacto de Auxilio Principal
-data class PrimaryContactPrefs(
-    val name: String,
-    val phoneNumber: String
-)
-
-// Pref #10 - Modo No Molestar
-data class DoNotDisturbPrefs(
-    val enabled: Boolean = false,
-    val startHour: Int = 22,
-    val endHour: Int = 7
-)
-
 interface PreferencesRepository {
 
-    // Pref #1 — Tema ("Sistema", "Claro", "Oscuro")
+    // Pref #1 — Tema ("Sistema", "Claro", "Oscuro", "Daltonico")
     val theme: Flow<String>
     suspend fun setTheme(theme: String)
 
@@ -61,13 +48,10 @@ interface PreferencesRepository {
     val overrideSilentModeForSos: Flow<Boolean>
     suspend fun setOverrideSilentModeForSos(override: Boolean)
 
-    // Pref #14 — Contacto de Auxilio Principal
-    val primaryAuxiliaryContact: Flow<PrimaryContactPrefs?>
-    suspend fun setPrimaryAuxiliaryContact(contact: PrimaryContactPrefs)
-    suspend fun clearPrimaryAuxiliaryContact()
-
     // Pref #15 — Activación SOS por Botón Físico
-    //Antohny lo va hacer por chistoso :v
     val sosPhysicalButtonEnabled: Flow<Boolean>
     suspend fun setSosPhysicalButtonEnabled(enabled: Boolean)
+
+    // Pref #16 — Eliminación de Datos / Preferencias (Ley N° 29733)
+    suspend fun clearAllPreferences()
 }

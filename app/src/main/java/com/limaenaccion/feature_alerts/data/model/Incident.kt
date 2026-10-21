@@ -5,7 +5,9 @@ enum class IncidentType(val label: String) {
     SOSPECHOSO("Sospechoso"),
     INCENDIO("Incendio"),
     MEDICO("Médico"),
-    ACCIDENTE("Accidente")
+    ACCIDENTE("Accidente"),
+    VANDALISMO("Vandalismo"),
+    EMERGENCIA_MEDICA("Emergencia Médica")
 }
 
 data class Incident(

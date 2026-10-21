@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.limaenaccion.main.MainScreen
 import com.limaenaccion.feature_alerts.presentation.IncidentDetailScreen
 import com.limaenaccion.feature_auth.presentation.ForgotPasswordScreen
 import com.limaenaccion.feature_auth.presentation.LoginScreen

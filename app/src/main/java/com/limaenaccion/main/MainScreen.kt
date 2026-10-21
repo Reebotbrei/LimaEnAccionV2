@@ -1,16 +1,13 @@
-package com.limaenaccion.core.navigation
+package com.limaenaccion.main
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -19,22 +16,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.feature_alerts.presentation.AlertsListScreen
 import com.limaenaccion.feature_emergency.presentation.EmergencyScreen
 import com.limaenaccion.feature_map.presentation.DashboardScreen
 import com.limaenaccion.feature_profile.presentation.ProfileScreen
 import com.limaenaccion.feature_settings.presentation.SettingsScreen
 
-import androidx.compose.foundation.layout.padding
 private data class BottomNavItem(val route: String, val label: String, val icon: ImageVector)
-
-private val bottomNavItems = listOf(
-    BottomNavItem("tab_home", "Inicio", Icons.Filled.Home),
-    BottomNavItem("tab_alerts", "Alertas", Icons.Filled.Notifications),
-    BottomNavItem("tab_directory", "Directorio", Icons.Filled.Shield),
-    BottomNavItem("tab_profile", "Perfil", Icons.Filled.Person),
-    BottomNavItem("tab_settings", "Ajustes", Icons.Filled.Settings)
-)
 
 @Composable
 fun MainScreen(
@@ -49,6 +38,15 @@ fun MainScreen(
     onLogout: () -> Unit
 ) {
     val innerNavController = rememberNavController()
+    val strings = LocalAppStrings.current
+
+    val bottomNavItems = listOf(
+        BottomNavItem("tab_home", strings.navHome, Icons.Filled.Home),
+        BottomNavItem("tab_alerts", strings.navAlerts, Icons.Filled.Notifications),
+        BottomNavItem("tab_directory", strings.navDirectory, Icons.Filled.Shield),
+        BottomNavItem("tab_profile", strings.navProfile, Icons.Filled.Person),
+        BottomNavItem("tab_settings", strings.navSettings, Icons.Filled.Settings)
+    )
 
     Scaffold(
         bottomBar = {
@@ -66,7 +64,13 @@ fun MainScreen(
                             }
                         },
                         icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) }
+                        label = {
+                            Text(
+                                text = item.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1
+                            )
+                        }
                     )
                 }
             }
@@ -92,7 +96,10 @@ fun MainScreen(
                 )
             }
             composable("tab_settings") {
-                SettingsScreen(onLogoutConfirmed = onLogout)
+                SettingsScreen(
+                    onLogoutConfirmed = onLogout,
+                    onManageContacts = onManageContacts
+                )
             }
         }
     }

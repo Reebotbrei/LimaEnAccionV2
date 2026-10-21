@@ -4,17 +4,20 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.limaenaccion.core.data.local.dao.ContactoDao
 import com.limaenaccion.core.data.local.dao.ReporteDao
+import com.limaenaccion.core.data.local.entities.ContactoEntity
 import com.limaenaccion.core.data.local.entities.ReporteEntity
 
 @Database(
-    entities = [ReporteEntity::class],
-    version = 1,
+    entities = [ReporteEntity::class, ContactoEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun reporteDao(): ReporteDao
+    abstract fun contactoDao(): ContactoDao
 
     companion object {
         @Volatile

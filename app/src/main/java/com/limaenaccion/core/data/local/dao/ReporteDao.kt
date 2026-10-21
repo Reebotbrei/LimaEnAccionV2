@@ -31,4 +31,7 @@ interface ReporteDao {
 
     @Query("DELETE FROM reporte_cache WHERE id = :id")
     fun eliminarPorId(id: String): Int
+
+    @Query("DELETE FROM reporte_cache")
+    fun eliminarTodos(): Int
 }

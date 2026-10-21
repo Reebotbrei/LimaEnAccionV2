@@ -1,10 +1,11 @@
-package com.limaenaccion
+package com.limaenaccion.main
 
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -13,6 +14,8 @@ import com.limaenaccion.core.data.network.RetrofitClient
 import com.limaenaccion.core.navigation.NavGraph
 import com.limaenaccion.core.navigation.Screen
 import com.limaenaccion.core.ui.theme.LimaEnAccionTheme
+import com.limaenaccion.core.util.LocalAppStrings
+import com.limaenaccion.core.util.getAppStrings
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -30,15 +33,24 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val skipLoadingScreen by mainViewModel.skipLoadingScreen.collectAsState()
+            val currentTheme by mainViewModel.theme.collectAsState()
+            val currentFontSize by mainViewModel.fontSize.collectAsState()
+            val currentLanguage by mainViewModel.language.collectAsState()
+
             if (skipLoadingScreen != null) {
-                LimaEnAccionTheme {
-                    NavGraph(
-                        startDestination = if (skipLoadingScreen == true) {
-                            Screen.Emergency.route
-                        } else {
-                            Screen.Splash.route
-                        }
-                    )
+                LimaEnAccionTheme(
+                    theme = currentTheme,
+                    fontSizeSp = currentFontSize
+                ) {
+                    CompositionLocalProvider(LocalAppStrings provides getAppStrings(currentLanguage)) {
+                        NavGraph(
+                            startDestination = if (skipLoadingScreen == true) {
+                                Screen.Emergency.route
+                            } else {
+                                Screen.Splash.route
+                            }
+                        )
+                    }
                 }
             }
         }
