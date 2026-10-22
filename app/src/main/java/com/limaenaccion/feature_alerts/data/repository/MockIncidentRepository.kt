@@ -1,58 +1,110 @@
 package com.limaenaccion.feature_alerts.data.repository
 
 import com.limaenaccion.feature_alerts.data.model.Incident
+import com.limaenaccion.feature_alerts.data.model.IncidentStatus
 import com.limaenaccion.feature_alerts.data.model.IncidentType
 
 class MockIncidentRepository : IncidentRepository {
 
     private val incidents = listOf(
         Incident(
-            id = "1", type = IncidentType.ROBO,
-            title = "Robo al paso cerca al Mercado",
-            description = "Sujeto a bordo de motocicleta lineal sin placa arrebató el celular a un joven. Huyó en dirección a la Av. Próceres.",
+            id = "1",
+            type = IncidentType.ROBO,
+            title = "Robo al paso en Jr. Los Jardines",
+            description = "Acaban de reportar un robo al paso en Jr. Los Jardines. El sospechoso huyó en una moto roja hacia la Av. Gran Chimú. Tengan cuidado por la zona.",
             reportedBy = "María Q.",
-            location = "Mercado Modelo de Caja de Agua",
-            distanceMeters = 380, reportedAt = "hace 12 minutos",
-            status = "Reportado a Serenazgo", mapX = 0.22f, mapY = 0.28f
+            handle = "@maria_vecina",
+            isOfficial = false,
+            location = "Caja de Agua, SJL",
+            distanceMeters = 380,
+            reportedAt = "12 min",
+            status = "Reportado a Serenazgo",
+            mapX = 0.22f,
+            mapY = 0.28f,
+            incidentStatus = IncidentStatus.REPORTADO,
+            witnessCount = 4,
+            commentsCount = 2,
+            isVerifiedByAuthority = false
         ),
         Incident(
-            id = "2", type = IncidentType.SOSPECHOSO,
-            title = "Merodeador en la Estación",
-            description = "Sujeto con gorra negra y actitud sospechosa observando a los pasajeros que salen con celulares en la mano.",
-            reportedBy = "Vecino anónimo",
-            location = "Exteriores Estación Caja de Agua (Línea 1)",
-            distanceMeters = 620, reportedAt = "hace 50 minutos",
-            status = "Pendiente de verificación", mapX = 0.68f, mapY = 0.32f
+            id = "2",
+            type = IncidentType.ACTIVIDAD_INUSUAL,
+            title = "Manipulación de cerraduras en Av. Gran Chimú",
+            description = "Se observa a una persona con herramientas intentando manipular cerraduras de viviendas deshabitadas cerca del parque. Hecho objetivo observable.",
+            reportedBy = "Luis A.",
+            handle = "@luis_cajadeagua",
+            isOfficial = false,
+            location = "Av. Gran Chimú",
+            distanceMeters = 620,
+            reportedAt = "45 min",
+            status = "Patrulla de Serenazgo en camino",
+            mapX = 0.68f,
+            mapY = 0.32f,
+            incidentStatus = IncidentStatus.EN_ATENCION,
+            witnessCount = 6,
+            commentsCount = 3,
+            isVerifiedByAuthority = false
         ),
         Incident(
-            id = "3", type = IncidentType.INCENDIO,
+            id = "3",
+            type = IncidentType.ACCIDENTE,
+            title = "Patrullaje preventivo reforzado e intervención",
+            description = "Patrullaje preventivo reforzado en Jr. Los Jardines y Av. Gran Chimú tras reportes de vecinos. Unidades de Serenazgo y PNP en el punto.",
+            reportedBy = "Serenazgo SJL",
+            handle = "@SerenazgoSJL",
+            isOfficial = true,
+            location = "Jr. Los Jardines, SJL",
+            distanceMeters = 150,
+            reportedAt = "2 h",
+            status = "Intervención oficial en curso",
+            mapX = 0.50f,
+            mapY = 0.45f,
+            incidentStatus = IncidentStatus.EN_ATENCION,
+            witnessCount = 12,
+            commentsCount = 5,
+            isVerifiedByAuthority = true
+        ),
+        Incident(
+            id = "4",
+            type = IncidentType.INCENDIO,
             title = "Cortocircuito en poste de luz",
-            description = "Cables de telefonía e internet están haciendo cortocircuito y botando chispas sobre la vereda. ¡Peligro para los peatones!",
+            description = "Cables de telefonía e internet haciendo chispas sobre la vereda. Cuadrilla municipal controló la situación.",
             reportedBy = "Carlos L.",
+            handle = "@carlos_vecino",
+            isOfficial = false,
             location = "Jr. Las Cantutas Cdra. 3, Caja de Agua",
-            distanceMeters = 1200, reportedAt = "hace 8 horas",
-            status = "Atendido por Enel", mapX = 0.55f, mapY = 0.55f
+            distanceMeters = 1200,
+            reportedAt = "4 h",
+            status = "Atendido y reparado",
+            mapX = 0.55f,
+            mapY = 0.55f,
+            incidentStatus = IncidentStatus.RESUELTO,
+            witnessCount = 8,
+            commentsCount = 4,
+            isVerifiedByAuthority = true
         ),
         Incident(
-            id = "4", type = IncidentType.MEDICO,
-            title = "Caída fuerte en losa deportiva",
-            description = "Joven sufrió una fuerte caída durante un partido y parece tener una fractura en el tobillo. No puede levantarse.",
-            reportedBy = "Vecino anónimo",
+            id = "5",
+            type = IncidentType.MEDICO,
+            title = "Auxilio médico en losa deportiva",
+            description = "Joven auxiliado tras fuerte caída durante partido. Trasladado a posta médica por ambulancia SAMU.",
+            reportedBy = "Vecino vigilante",
+            handle = "@vecino_alerta",
+            isOfficial = false,
             location = "Losa Deportiva Caja de Agua",
-            distanceMeters = 200, reportedAt = "ayer",
-            status = "Atendido por SAMU", mapX = 0.35f, mapY = 0.72f
-        ),
-        Incident(
-            id = "5", type = IncidentType.ACCIDENTE,
-            title = "Choque leve en Av. Lima",
-            description = "Mototaxi chocó contra un auto particular que estaba estacionado. Tráfico ligero en la zona, están discutiendo.",
-            reportedBy = "Juan P.",
-            location = "Av. Lima Cdra. 4 (cerca a la posta)",
-            distanceMeters = 850, reportedAt = "hace 2 horas",
-            status = "Resuelto", mapX = 0.45f, mapY = 0.60f
+            distanceMeters = 200,
+            reportedAt = "ayer",
+            status = "Atendido por SAMU",
+            mapX = 0.35f,
+            mapY = 0.72f,
+            incidentStatus = IncidentStatus.RESUELTO,
+            witnessCount = 5,
+            commentsCount = 2,
+            isVerifiedByAuthority = true
         )
     )
 
     override suspend fun getIncidents(): List<Incident> = incidents
+
     override suspend fun getIncidentById(id: String): Incident? = incidents.find { it.id == id }
 }

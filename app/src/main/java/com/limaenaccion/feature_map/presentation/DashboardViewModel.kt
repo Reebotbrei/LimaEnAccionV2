@@ -1,11 +1,12 @@
 package com.limaenaccion.feature_map.presentation
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.util.UiState
 import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.data.repository.IncidentRepository
-import com.limaenaccion.feature_alerts.data.repository.MockIncidentRepository
+import com.limaenaccion.feature_alerts.data.repository.IncidentRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,9 +20,10 @@ data class DashboardUiState(
     val selectedIncidentId: String? = null
 )
 
-class DashboardViewModel(
-    private val repository: IncidentRepository = MockIncidentRepository()
-) : ViewModel() {
+class DashboardViewModel @JvmOverloads constructor(
+    application: Application,
+    private val repository: IncidentRepository = IncidentRepositoryImpl(application)
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()

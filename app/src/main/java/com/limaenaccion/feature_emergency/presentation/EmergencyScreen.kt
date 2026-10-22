@@ -17,6 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.limaenaccion.core.ui.components.AddOptionCard
 import com.limaenaccion.core.ui.components.EmergencyContactCard
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.core.util.UiState
 import com.limaenaccion.feature_emergency.data.model.EmergencyContactType
 
@@ -28,12 +29,13 @@ fun EmergencyScreen(
     viewModel: EmergencyViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
     val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Líneas de Emergencia") },
+                title = { Text(strings.emergencyLinesTitle) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -42,7 +44,7 @@ fun EmergencyScreen(
         },
         bottomBar = {
             PrimaryButton(
-                text = "Iniciar Sesión",
+                text = strings.loginBtn,
                 onClick = onNavigateToLogin,
                 modifier = Modifier.padding(16.dp)
             )
@@ -86,8 +88,8 @@ fun EmergencyScreen(
                     }
                     item {
                         AddOptionCard(
-                            title = "Nuevo contacto de auxilio",
-                            subtitle = "Agrega un número vecinal",
+                            title = strings.newAuxiliaryContact,
+                            subtitle = strings.addNeighborNumber,
                             onClick = onAddAuxiliaryContact
                         )
                     }

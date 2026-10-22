@@ -10,10 +10,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.core.util.UiState
 import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.presentation.IncidentCard
@@ -42,6 +43,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
 
     Scaffold(
         topBar = {
@@ -49,16 +51,21 @@ fun DashboardScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text("San Juan de Lurigancho", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Mi Vecindario", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(strings.myNeighborhood, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AssistChip(onClick = onReportClick, label = { Text("+ Reportar") })
+                        AssistChip(onClick = onReportClick, label = { Text(strings.reportBtn) })
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(Icons.Filled.Notifications, contentDescription = "Alertas")
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                ViewModeToggle(selected = uiState.viewMode, onSelectedChange = viewModel::onViewModeChange)
+                ViewModeToggle(
+                    selected = uiState.viewMode,
+                    mapLabel = strings.viewMap,
+                    listLabel = strings.viewList,
+                    onSelectedChange = viewModel::onViewModeChange
+                )
             }
         },
         bottomBar = {
@@ -71,7 +78,7 @@ fun DashboardScreen(
                 ) {
                     Icon(Icons.Filled.Bolt, contentDescription = null, tint = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("BOTÓN SOS", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text(strings.sosButton, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -122,11 +129,16 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun ViewModeToggle(selected: DashboardViewMode, onSelectedChange: (DashboardViewMode) -> Unit) {
+private fun ViewModeToggle(
+    selected: DashboardViewMode,
+    mapLabel: String,
+    listLabel: String,
+    onSelectedChange: (DashboardViewMode) -> Unit
+) {
     Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant) {
         Row(modifier = Modifier.padding(4.dp)) {
-            ToggleChip("Mapa", Icons.Filled.Map, selected == DashboardViewMode.MAP) { onSelectedChange(DashboardViewMode.MAP) }
-            ToggleChip("Lista", Icons.Filled.ViewList, selected == DashboardViewMode.LIST) { onSelectedChange(DashboardViewMode.LIST) }
+            ToggleChip(mapLabel, Icons.Filled.Map, selected == DashboardViewMode.MAP) { onSelectedChange(DashboardViewMode.MAP) }
+            ToggleChip(listLabel, Icons.AutoMirrored.Filled.ViewList, selected == DashboardViewMode.LIST) { onSelectedChange(DashboardViewMode.LIST) }
         }
     }
 }
@@ -144,46 +156,40 @@ private fun ToggleChip(text: String, icon: ImageVector, selected: Boolean, onCli
 
 @Composable
 private fun SimulatedMap(incidents: List<Incident>, onPinClick: (String) -> Unit) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color(0xFFE8EDE9))) {
-        val mapWidth = maxWidth
-        val mapHeight = maxHeight
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color(0xFFE5E7EB))) {
+        val width = constraints.maxWidth.toFloat()
+        val height = constraints.maxHeight.toFloat()
 
-        // Cuadrícula simulada, sustituye a un mapa real por ahora.
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val step = 60f
-            var x = 0f
-            while (x < size.width) {
-                drawLine(Color(0xFFD0D8D2), Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
-                x += step
-            }
-            var y = 0f
-            while (y < size.height) {
-                drawLine(Color(0xFFD0D8D2), Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-                y += step
-            }
+            val roadColor = Color.White
+            drawLine(color = roadColor, start = Offset(0f, height * 0.4f), end = Offset(width, height * 0.4f), strokeWidth = 14f)
+            drawLine(color = roadColor, start = Offset(0f, height * 0.7f), end = Offset(width, height * 0.7f), strokeWidth = 10f)
+            drawLine(color = roadColor, start = Offset(width * 0.35f, 0f), end = Offset(width * 0.35f, height), strokeWidth = 14f)
+            drawLine(color = roadColor, start = Offset(width * 0.75f, 0f), end = Offset(width * 0.75f, height), strokeWidth = 10f)
         }
 
+        Box(
+            modifier = Modifier
+                .offset((width * 0.5f / 2.75f).dp, (height * 0.5f / 2.75f).dp)
+                .size(16.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF2563EB))
+        )
+
         incidents.forEach { incident ->
+            val pinX = (width * incident.mapX / 2.75f).dp
+            val pinY = (height * incident.mapY / 2.75f).dp
             Box(
                 modifier = Modifier
-                    .offset(x = mapWidth * incident.mapX - 16.dp, y = mapHeight * incident.mapY - 16.dp)
-                    .size(32.dp)
+                    .offset(pinX, pinY)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(incident.type.color())
                     .clickable { onPinClick(incident.id) },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = incident.type.icon(), contentDescription = incident.title, tint = Color.White, modifier = Modifier.size(18.dp))
+                Icon(imageVector = incident.type.icon(), contentDescription = incident.type.label, tint = Color.White, modifier = Modifier.size(20.dp))
             }
-        }
-
-        Surface(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-            shape = RoundedCornerShape(50),
-            color = Color.White,
-            shadowElevation = 2.dp
-        ) {
-            Text("${incidents.size} incidentes", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelSmall)
         }
     }
 }

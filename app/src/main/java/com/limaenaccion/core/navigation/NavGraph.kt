@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.limaenaccion.main.MainScreen
 import com.limaenaccion.feature_alerts.presentation.IncidentDetailScreen
 import com.limaenaccion.feature_auth.presentation.ForgotPasswordScreen
 import com.limaenaccion.feature_auth.presentation.LoginScreen
@@ -201,7 +202,7 @@ fun NavGraph(
                 ReportTypeScreen(
                     viewModel = reportViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onContinue = { navController.navigate(Screen.ReportCamera.route) }
+                    onContinue = { navController.navigate(Screen.ReportDetails.route) }
                 )
             }
 
@@ -210,7 +211,7 @@ fun NavGraph(
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
                 CameraSimulationScreen(
                     viewModel = reportViewModel,
-                    onClose = { navController.popBackStack(Screen.Main.route, false) },
+                    onClose = { navController.popBackStack() },
                     onPhotoCaptured = { navController.navigate(Screen.ReportPhotoPreview.route) }
                 )
             }
@@ -220,9 +221,9 @@ fun NavGraph(
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
                 PhotoPreviewScreen(
                     viewModel = reportViewModel,
-                    onNavigateBack = { navController.popBackStack(Screen.Main.route, false) },
+                    onNavigateBack = { navController.popBackStack(Screen.ReportDetails.route, false) },
                     onRetake = { navController.popBackStack(Screen.ReportCamera.route, false) },
-                    onAccept = { navController.navigate(Screen.ReportDetails.route) }
+                    onAccept = { navController.popBackStack(Screen.ReportDetails.route, false) }
                 )
             }
 
@@ -232,6 +233,7 @@ fun NavGraph(
                 ReportDetailsScreen(
                     viewModel = reportViewModel,
                     onNavigateBack = { navController.popBackStack() },
+                    onTakePhoto = { navController.navigate(Screen.ReportCamera.route) },
                     onPublished = { navController.navigate(Screen.ReportSuccess.route) }
                 )
             }

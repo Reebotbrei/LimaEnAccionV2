@@ -1,12 +1,13 @@
 package com.limaenaccion.feature_alerts.presentation
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.util.UiState
 import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.data.repository.IncidentRepository
-import com.limaenaccion.feature_alerts.data.repository.MockIncidentRepository
+import com.limaenaccion.feature_alerts.data.repository.IncidentRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,11 +17,12 @@ import kotlinx.coroutines.launch
  * `savedStateHandle["incidentId"]` se llena automáticamente por Navigation
  * Compose a partir del argumento de ruta — no hace falta pasarlo a mano.
  */
-class IncidentDetailViewModel(
+class IncidentDetailViewModel @JvmOverloads constructor(
+    application: Application,
     savedStateHandle: SavedStateHandle,
-) : ViewModel() {
+    private val repository: IncidentRepository = IncidentRepositoryImpl(application)
+) : AndroidViewModel(application) {
 
-    private val repository: IncidentRepository = MockIncidentRepository()
     private val _uiState = MutableStateFlow<UiState<Incident>>(UiState.Loading)
     val uiState: StateFlow<UiState<Incident>> = _uiState.asStateFlow()
 

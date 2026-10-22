@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.limaenaccion.core.ui.components.MenuRow
+import com.limaenaccion.core.util.LocalAppStrings
 
 @Composable
 fun ProfileScreen(
@@ -33,34 +34,40 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Column(
-            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary).padding(vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier.size(72.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Column(
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary).padding(vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Filled.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(36.dp))
+                Box(
+                    modifier = Modifier.size(72.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(36.dp))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(uiState.fullName, color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    "${strings.dniLabel}: ${uiState.dni} · ${strings.currentDistrictLabel}: ${uiState.district}",
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(uiState.fullName, color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(
-                "DNI: ${uiState.dni} · Distrito actual: ${uiState.district}",
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
 
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("CONFIGURACIÓN DE CUENTA", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            MenuRow(icon = Icons.Filled.Person, title = "Editar Datos Personales", onClick = onEditPersonalData)
-            MenuRow(icon = Icons.Filled.PhotoCamera, title = "Cambiar foto de perfil", onClick = onChangePhoto)
-            MenuRow(icon = Icons.Filled.LocationCity, title = "Cambiar de Domicilio / Zona", onClick = onUpdateAddress)
-            MenuRow(icon = Icons.Filled.History, title = "Historial de Mis Reportes", onClick = onReportHistory)
-            MenuRow(icon = Icons.Filled.ContactPhone, title = "Contactos de auxilio", subtitle = "Registrar o administrar contactos", onClick = onManageContacts)
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(strings.accountSettingsSection, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                MenuRow(icon = Icons.Filled.Person, title = strings.editPersonalData, onClick = onEditPersonalData)
+                MenuRow(icon = Icons.Filled.PhotoCamera, title = strings.changeProfilePhoto, onClick = onChangePhoto)
+                MenuRow(icon = Icons.Filled.LocationCity, title = strings.changeAddress, onClick = onUpdateAddress)
+                MenuRow(icon = Icons.Filled.History, title = strings.reportHistory, onClick = onReportHistory)
+                MenuRow(icon = Icons.Filled.ContactPhone, title = strings.auxiliaryContacts, subtitle = strings.manageContactsSubtitle, onClick = onManageContacts)
+            }
         }
     }
 }

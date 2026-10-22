@@ -1,5 +1,6 @@
 package com.limaenaccion.feature_reports.presentation
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -9,9 +10,13 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -22,10 +27,22 @@ fun PhotoPreviewScreen(
     onRetake: () -> Unit,
     onAccept: () -> Unit
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1A1A1A))) {
-        // Simulación de la foto sin CameraX, es solo un placeholder visual.
-        Box(modifier = Modifier.fillMaxSize().padding(bottom = 96.dp), contentAlignment = Alignment.Center) {
-            Text("FOTO CAPTURADA", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        val bitmap = uiState.photoBitmap
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Foto capturada de la evidencia",
+                modifier = Modifier.fillMaxSize().padding(bottom = 96.dp),
+                contentScale = ContentScale.Fit
+            )
+        } else {
+            // Placeholder si no hubo foto real
+            Box(modifier = Modifier.fillMaxSize().padding(bottom = 96.dp), contentAlignment = Alignment.Center) {
+                Text("FOTO CAPTURADA", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            }
         }
 
         IconButton(onClick = onNavigateBack, modifier = Modifier.align(Alignment.TopStart).padding(12.dp)) {
