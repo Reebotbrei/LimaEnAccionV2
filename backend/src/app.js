@@ -4,6 +4,7 @@ const cors = require('cors');
 const testRoutes = require('./routes/test.routes');
 const reportesRoutes = require('./routes/reportes.routes');
 const emergenciasRoutes = require('./routes/emergencias.routes');
+const { validarApiKey } = require('./middlewares/apiKey.middleware');
 
 const app = express();
 
@@ -12,9 +13,9 @@ app.use(cors());
 app.use(express.json());
 
 // Rutas de la API
-app.use('/api', testRoutes); // Compatible con /api/test existente
-app.use('/api/v1/reportes', reportesRoutes);
-app.use('/api/v1/emergencias', emergenciasRoutes);
+app.use('/api', testRoutes); // libre para probar que el servidor responde
+app.use('/api/v1/reportes', validarApiKey, reportesRoutes);
+app.use('/api/v1/emergencias', validarApiKey, emergenciasRoutes);
 
 // Ruta base de bienvenida y salud
 app.get('/', (req, res) => {
