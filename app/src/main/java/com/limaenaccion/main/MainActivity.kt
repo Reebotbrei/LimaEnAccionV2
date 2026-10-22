@@ -5,9 +5,13 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.limaenaccion.core.data.network.RetrofitClient
@@ -43,13 +47,18 @@ class MainActivity : ComponentActivity() {
                     fontSizeSp = currentFontSize
                 ) {
                     CompositionLocalProvider(LocalAppStrings provides getAppStrings(currentLanguage)) {
-                        NavGraph(
-                            startDestination = if (skipLoadingScreen == true) {
-                                Screen.Emergency.route
-                            } else {
-                                Screen.Splash.route
-                            }
-                        )
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            NavGraph(
+                                startDestination = if (skipLoadingScreen == true) {
+                                    Screen.Emergency.route
+                                } else {
+                                    Screen.Splash.route
+                                }
+                            )
+                        }
                     }
                 }
             }

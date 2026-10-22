@@ -7,6 +7,7 @@ import com.limaenaccion.core.data.preferences.PreferencesRepository
 import com.limaenaccion.core.data.preferences.PreferencesRepositoryImpl
 import com.limaenaccion.core.util.UiState
 import com.limaenaccion.feature_alerts.data.model.Incident
+import com.limaenaccion.feature_alerts.data.model.IncidentStatus
 import com.limaenaccion.feature_alerts.data.repository.IncidentRepository
 import com.limaenaccion.feature_alerts.data.repository.IncidentRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+enum class AlertFeedTab {
+    CERCA_DE_TI,
+    RECIENTES
+}
 
 class AlertsListViewModel @JvmOverloads constructor(
     application: Application,
@@ -24,25 +30,88 @@ class AlertsListViewModel @JvmOverloads constructor(
     private val _uiState = MutableStateFlow<UiState<List<Incident>>>(UiState.Loading)
     val uiState: StateFlow<UiState<List<Incident>>> = _uiState.asStateFlow()
 
-    init { loadIncidents() }
+    private val _selectedTab = MutableStateFlow(AlertFeedTab.CERCA_DE_TI)
+    val selectedTab: StateFlow<AlertFeedTab> = _selectedTab.asStateFlow()
+
+    private val _witnessedIncidentIds = MutableStateFlow<Set<String>>(emptySet())
+    val witnessedIncidentIds: StateFlow<Set<String>> = _witnessedIncidentIds.asStateFlow()
+
+    private val _falsehoodReportedIds = MutableStateFlow<Set<String>>(emptySet())
+    val falsehoodReportedIds: StateFlow<Set<String>> = _falsehoodReportedIds.asStateFlow()
+
+    private var cachedAllIncidents: List<Incident> = emptyList()
+
+    init {
+        loadIncidents()
+    }
+
+    fun onTabSelected(tab: AlertFeedTab) {
+        if (_selectedTab.value == tab) return
+        _selectedTab.value = tab
+        applyFiltersAndTab()
+    }
+
+    fun onToggleWitness(incidentId: String) {
+        val current = _witnessedIncidentIds.value.toMutableSet()
+        if (current.contains(incidentId)) {
+            current.remove(incidentId)
+        } else {
+            current.add(incidentId)
+        }
+        _witnessedIncidentIds.value = current
+    }
+
+    fun onReportFalsehood(incidentId: String) {
+        val current = _falsehoodReportedIds.value.toMutableSet()
+        current.add(incidentId)
+        _falsehoodReportedIds.value = current
+    }
 
     fun loadIncidents() {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                val allIncidents = repository.getIncidents()
+                cachedAllIncidents = repository.getIncidents()
+                applyFiltersAndTab()
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error(e.message ?: "No se pudieron cargar las alertas")
+            }
+        }
+    }
+
+    private fun applyFiltersAndTab() {
+        viewModelScope.launch {
+            try {
                 val radius = preferencesRepository.alertRadiusMeters.first()
                 val allowedTypes = preferencesRepository.incidentTypesFilter.first()
 
-                // Pref #8 (Radio de distancia) y Pref #9 (Filtro por Tipo de Incidente)
-                val filtered = allIncidents.filter { incident ->
-                    incident.distanceMeters <= radius &&
-                        (allowedTypes.isEmpty() || allowedTypes.contains(incident.type.name))
+                // Filtrar según tipos permitidos (Pref #9)
+                val typeFiltered = cachedAllIncidents.filter { incident ->
+                    allowedTypes.isEmpty() || allowedTypes.contains(incident.type.name)
                 }
 
-                _uiState.value = UiState.Success(filtered)
+                // Filtrar y ordenar según la pestaña activa
+                val finalList = when (_selectedTab.value) {
+                    AlertFeedTab.CERCA_DE_TI -> {
+                        // Pref #8 (Radio de distancia activo) ordenado estrictamente por proximidad
+                        typeFiltered
+                            .filter { it.distanceMeters <= radius }
+                            .sortedBy { it.distanceMeters }
+                    }
+                    AlertFeedTab.RECIENTES -> {
+                        // Ordenar por vigencia y estado: Activos y En atención primero
+                        typeFiltered.sortedWith(
+                            compareBy(
+                                { it.incidentStatus == IncidentStatus.RESUELTO },
+                                { it.distanceMeters }
+                            )
+                        )
+                    }
+                }
+
+                _uiState.value = UiState.Success(finalList)
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "No se pudieron cargar las alertas")
+                _uiState.value = UiState.Success(cachedAllIncidents)
             }
         }
     }

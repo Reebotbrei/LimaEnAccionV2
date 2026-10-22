@@ -202,7 +202,7 @@ fun NavGraph(
                 ReportTypeScreen(
                     viewModel = reportViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onContinue = { navController.navigate(Screen.ReportCamera.route) }
+                    onContinue = { navController.navigate(Screen.ReportDetails.route) }
                 )
             }
 
@@ -211,7 +211,7 @@ fun NavGraph(
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
                 CameraSimulationScreen(
                     viewModel = reportViewModel,
-                    onClose = { navController.popBackStack(Screen.Main.route, false) },
+                    onClose = { navController.popBackStack() },
                     onPhotoCaptured = { navController.navigate(Screen.ReportPhotoPreview.route) }
                 )
             }
@@ -221,9 +221,9 @@ fun NavGraph(
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
                 PhotoPreviewScreen(
                     viewModel = reportViewModel,
-                    onNavigateBack = { navController.popBackStack(Screen.Main.route, false) },
+                    onNavigateBack = { navController.popBackStack(Screen.ReportDetails.route, false) },
                     onRetake = { navController.popBackStack(Screen.ReportCamera.route, false) },
-                    onAccept = { navController.navigate(Screen.ReportDetails.route) }
+                    onAccept = { navController.popBackStack(Screen.ReportDetails.route, false) }
                 )
             }
 
@@ -233,6 +233,7 @@ fun NavGraph(
                 ReportDetailsScreen(
                     viewModel = reportViewModel,
                     onNavigateBack = { navController.popBackStack() },
+                    onTakePhoto = { navController.navigate(Screen.ReportCamera.route) },
                     onPublished = { navController.navigate(Screen.ReportSuccess.route) }
                 )
             }

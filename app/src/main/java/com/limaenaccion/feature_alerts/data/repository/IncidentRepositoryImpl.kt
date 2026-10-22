@@ -8,6 +8,7 @@ import com.limaenaccion.core.data.local.entities.ReporteEntity
 import com.limaenaccion.core.data.network.ApiService
 import com.limaenaccion.core.data.network.RetrofitClient
 import com.limaenaccion.feature_alerts.data.model.Incident
+import com.limaenaccion.feature_alerts.data.model.IncidentStatus
 import com.limaenaccion.feature_alerts.data.model.IncidentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,7 +25,7 @@ class IncidentRepositoryImpl(
         return when {
             clean.contains("VANDALISMO") -> IncidentType.VANDALISMO
             clean.contains("MEDIC") -> IncidentType.EMERGENCIA_MEDICA
-            clean.contains("SOSPECH") -> IncidentType.SOSPECHOSO
+            clean.contains("ACTIVIDAD") || clean.contains("INUSUAL") || clean.contains("SOSPECH") -> IncidentType.ACTIVIDAD_INUSUAL
             clean.contains("INCENDIO") -> IncidentType.INCENDIO
             clean.contains("ACCIDENT") -> IncidentType.ACCIDENTE
             clean.contains("ROBO") -> IncidentType.ROBO
@@ -33,6 +34,15 @@ class IncidentRepositoryImpl(
             } catch (e: Exception) {
                 IncidentType.ROBO
             }
+        }
+    }
+
+    private fun parseIncidentStatus(estado: String): IncidentStatus {
+        val clean = estado.trim().uppercase()
+        return when {
+            clean.contains("RESUELTO") || clean.contains("ATENDIDO") -> IncidentStatus.RESUELTO
+            clean.contains("ATENCION") || clean.contains("CURSO") || clean.contains("PROCESO") -> IncidentStatus.EN_ATENCION
+            else -> IncidentStatus.REPORTADO
         }
     }
 
@@ -83,12 +93,19 @@ class IncidentRepositoryImpl(
                 title = entity.titulo,
                 description = if (!entity.descripcion.isNullOrBlank()) entity.descripcion else "Reporte de ${type.label} registrado en la zona.",
                 reportedBy = "Tú (Vecino)",
+                handle = "@vecino_sjl",
+                isOfficial = false,
                 location = "Caja de Agua, SJL",
                 distanceMeters = 80,
-                reportedAt = "hace unos instantes",
+                reportedAt = "ahora",
                 status = "Reportado a Serenazgo · En revisión",
                 mapX = 0.5f,
-                mapY = 0.5f
+                mapY = 0.5f,
+                photoBase64 = entity.fotoUri,
+                incidentStatus = parseIncidentStatus(entity.estado),
+                witnessCount = 1,
+                commentsCount = 0,
+                isVerifiedByAuthority = false
             )
         }
 
@@ -106,12 +123,19 @@ class IncidentRepositoryImpl(
                 title = entity.titulo,
                 description = if (!entity.descripcion.isNullOrBlank()) entity.descripcion else "Reporte de ${type.label} registrado en la zona.",
                 reportedBy = "Tú (Vecino)",
+                handle = "@vecino_sjl",
+                isOfficial = false,
                 location = "Caja de Agua, SJL",
                 distanceMeters = 80,
-                reportedAt = "hace unos instantes",
+                reportedAt = "ahora",
                 status = "Reportado a Serenazgo · En revisión",
                 mapX = 0.5f,
-                mapY = 0.5f
+                mapY = 0.5f,
+                photoBase64 = entity.fotoUri,
+                incidentStatus = parseIncidentStatus(entity.estado),
+                witnessCount = 1,
+                commentsCount = 0,
+                isVerifiedByAuthority = false
             )
         } else {
             mockRepository.getIncidentById(id)

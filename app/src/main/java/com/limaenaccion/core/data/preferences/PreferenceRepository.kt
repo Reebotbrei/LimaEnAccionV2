@@ -1,5 +1,6 @@
 package com.limaenaccion.core.data.preferences
 
+import com.limaenaccion.core.data.preferences.model.DoNotDisturbPrefs
 import kotlinx.coroutines.flow.Flow
 
 interface PreferencesRepository {

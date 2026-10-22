@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.data.local.AppDatabase
 import com.limaenaccion.core.data.local.dao.ContactoDao
 import com.limaenaccion.core.data.local.dao.ReporteDao
-import com.limaenaccion.core.data.preferences.DoNotDisturbPrefs
+import com.limaenaccion.core.data.preferences.model.DoNotDisturbPrefs
 import com.limaenaccion.core.data.preferences.PreferencesRepository
 import com.limaenaccion.core.data.preferences.PreferencesRepositoryImpl
 import kotlinx.coroutines.Dispatchers

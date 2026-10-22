@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.util.ImageCompressor
+import com.limaenaccion.feature_reports.data.model.ReportTimeframe
 import com.limaenaccion.feature_reports.data.model.ReportType
 import com.limaenaccion.feature_reports.data.repository.ReportRepository
 import com.limaenaccion.feature_reports.data.repository.ReportRepositoryImpl
@@ -15,18 +16,23 @@ import kotlinx.coroutines.launch
 
 data class ReportUiState(
     val selectedType: ReportType? = null,
-    val photoTaken: Boolean = false,
-    val photoSizeMb: Double = 0.45, // Tamaño real comprimido (< 0.5 MB - RNF-10)
-    val photoBitmap: Bitmap? = null, // Imagen real capturada por la cámara
-    val photoBase64: String? = null, // Imagen comprimida en Base64 para el backend
+    val timeframe: ReportTimeframe = ReportTimeframe.AHORA,
+    val location: String = "Av. Próceres de la Independencia 133, SJL",
+    val isCustomLocation: Boolean = false,
     val description: String = "",
+    val isAnonymous: Boolean = false,
+    val photoTaken: Boolean = false,
+    val photoSizeMb: Double = 0.45,
+    val photoBitmap: Bitmap? = null,
+    val photoBase64: String? = null,
     val hasVoiceNote: Boolean = false,
-    val location: String = "Av Lima 133, Caja de Agua",
     val isPublishing: Boolean = false,
     val published: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val hasDraftSaved: Boolean = false
 ) {
-    val isDescriptionValid: Boolean get() = description.isNotBlank()
+    val canPublish: Boolean get() = selectedType != null && location.isNotBlank()
+    val isDescriptionValid: Boolean get() = true // En reporte rápido, la descripción y foto son opcionales
 }
 
 class ReportViewModel @JvmOverloads constructor(
@@ -38,10 +44,36 @@ class ReportViewModel @JvmOverloads constructor(
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
     fun onTypeSelected(type: ReportType) {
-        _uiState.value = _uiState.value.copy(selectedType = type)
+        _uiState.value = _uiState.value.copy(selectedType = type, hasDraftSaved = true)
     }
 
-    // Captura con cámara real de Android y compresión RNF-10
+    fun onTimeframeChanged(timeframe: ReportTimeframe) {
+        _uiState.value = _uiState.value.copy(timeframe = timeframe, hasDraftSaved = true)
+    }
+
+    fun onLocationChanged(newLocation: String) {
+        _uiState.value = _uiState.value.copy(
+            location = newLocation,
+            isCustomLocation = true,
+            hasDraftSaved = true
+        )
+    }
+
+    fun onResetLocationToGps() {
+        _uiState.value = _uiState.value.copy(
+            location = "Av. Próceres de la Independencia 133, SJL (GPS actual)",
+            isCustomLocation = false,
+            hasDraftSaved = true
+        )
+    }
+
+    fun onToggleAnonymous() {
+        _uiState.value = _uiState.value.copy(
+            isAnonymous = !_uiState.value.isAnonymous,
+            hasDraftSaved = true
+        )
+    }
+
     fun onPhotoCaptured(bitmap: Bitmap?) {
         if (bitmap != null) {
             val bytes = ImageCompressor.compressBitmap(bitmap)
@@ -51,10 +83,11 @@ class ReportViewModel @JvmOverloads constructor(
                 photoTaken = true,
                 photoBitmap = bitmap,
                 photoBase64 = base64,
-                photoSizeMb = sizeMb
+                photoSizeMb = sizeMb,
+                hasDraftSaved = true
             )
         } else {
-            _uiState.value = _uiState.value.copy(photoTaken = true)
+            _uiState.value = _uiState.value.copy(photoTaken = true, hasDraftSaved = true)
         }
     }
 
@@ -62,36 +95,61 @@ class ReportViewModel @JvmOverloads constructor(
         _uiState.value = _uiState.value.copy(
             photoTaken = false,
             photoBitmap = null,
-            photoBase64 = null
+            photoBase64 = null,
+            hasDraftSaved = true
+        )
+    }
+
+    fun onRemovePhoto() {
+        _uiState.value = _uiState.value.copy(
+            photoTaken = false,
+            photoBitmap = null,
+            photoBase64 = null,
+            hasDraftSaved = true
         )
     }
 
     fun onDescriptionChange(value: String) {
-        _uiState.value = _uiState.value.copy(description = value)
+        _uiState.value = _uiState.value.copy(description = value, hasDraftSaved = true)
     }
 
     fun onToggleVoiceNote() {
-        _uiState.value = _uiState.value.copy(hasVoiceNote = !_uiState.value.hasVoiceNote)
+        _uiState.value = _uiState.value.copy(
+            hasVoiceNote = !_uiState.value.hasVoiceNote,
+            hasDraftSaved = true
+        )
     }
 
-    // Publicación a través de ReportRepository (Clean Architecture)
+    fun resetReport() {
+        _uiState.value = ReportUiState()
+    }
+
     fun onPublishClicked() {
         val state = _uiState.value
-        if (!state.isDescriptionValid || state.isPublishing) return
+        if (!state.canPublish || state.isPublishing) return
 
         _uiState.value = state.copy(isPublishing = true, errorMessage = null)
 
         viewModelScope.launch {
             val type = state.selectedType ?: ReportType.ROBO
-            val title = "Reporte de ${type.label}"
-            val description = state.description
+            val title = if (state.isAnonymous) {
+                "[Anónimo] ${type.label} · ${state.timeframe.label}"
+            } else {
+                "${type.label} · ${state.timeframe.label}"
+            }
+            val finalDescription = if (state.description.isNotBlank()) {
+                "${state.description}\nUbicación reportada: ${state.location}"
+            } else {
+                "Alerta de ${type.label} reportada en ${state.location}. Ocurrencia: ${state.timeframe.label}."
+            }
+
             val latitud = -12.019542
             val longitud = -77.014231
 
             val result = reportRepository.publishReport(
                 type = type,
                 title = title,
-                description = description,
+                description = finalDescription,
                 latitude = latitud,
                 longitude = longitud,
                 photoBase64 = state.photoBase64
@@ -101,7 +159,8 @@ class ReportViewModel @JvmOverloads constructor(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(
                         isPublishing = false,
-                        published = true
+                        published = true,
+                        hasDraftSaved = false
                     )
                 },
                 onFailure = { error ->

@@ -1,4 +1,4 @@
-package com.limaenaccion.core.data.preferences
+package com.limaenaccion.core.data.preferences.model
 
 // Pref #10 - Modo No Molestar
 data class DoNotDisturbPrefs(

@@ -2,7 +2,7 @@ package com.limaenaccion.feature_reports.data.model
 
 enum class ReportType(val label: String) {
     ROBO("Robo"),
-    SOSPECHOSO("Sospechoso"),
+    SOSPECHOSO("Actividad Inusual"),
     EMERGENCIA_MEDICA("Emergencia Médica"),
     INCENDIO("Incendio"),
     ACCIDENTE("Accidente"),

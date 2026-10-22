@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -17,12 +17,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.limaenaccion.core.ui.components.PrimaryButton
 import com.limaenaccion.core.util.UiState
+import com.limaenaccion.feature_alerts.data.model.IncidentStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +37,11 @@ fun IncidentDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detalle del incidente") },
+                title = { Text("Detalle del incidente cívico") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Volver") }
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
                 }
             )
         }
@@ -63,7 +67,7 @@ fun IncidentDetailScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Foto adjunta por el vecino", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                            Text("Evidencia fotográfica adjunta", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                         }
                     }
 
@@ -77,7 +81,19 @@ fun IncidentDetailScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(incident.reportedAt, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                            val (badgeBg, badgeFg) = when (incident.incidentStatus) {
+                                IncidentStatus.REPORTADO -> Color(0xFFFEF3C7) to Color(0xFFB45309)
+                                IncidentStatus.EN_ATENCION -> Color(0xFFDBEAFE) to Color(0xFF1D4ED8)
+                                IncidentStatus.RESUELTO -> Color(0xFFDCFCE7) to Color(0xFF15803D)
+                            }
+                            Surface(shape = RoundedCornerShape(50), color = badgeBg) {
+                                Text(
+                                    "${incident.incidentStatus.iconEmoji} ${incident.incidentStatus.label}",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    color = badgeFg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold
+                                )
+                            }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("· ${incident.distanceMeters}m", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -96,14 +112,11 @@ fun IncidentDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
                         Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
-                            Text("⚠ ${incident.status}", modifier = Modifier.padding(10.dp), style = MaterialTheme.typography.labelSmall)
+                            Text("ℹ Estado vecinal: ${incident.status}", modifier = Modifier.padding(10.dp), style = MaterialTheme.typography.labelSmall)
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedButton(onClick = { /* Sin lógica */ }, modifier = Modifier.weight(1f)) { Text("Verificar") }
-                            PrimaryButton(text = "Compartir", onClick = { /* Sin lógica */ }, modifier = Modifier.weight(1f))
-                        }
+                        PrimaryButton(text = "Aportar testimonio o información", onClick = onNavigateBack)
                     }
                 }
             }
@@ -115,7 +128,7 @@ fun IncidentDetailScreen(
 private fun InfoRow(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
