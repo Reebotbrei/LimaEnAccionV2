@@ -1,10 +1,17 @@
 package com.limaenaccion.feature_auth.presentation
 
-import androidx.lifecycle.ViewModel
 import com.limaenaccion.feature_auth.data.model.Gender
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.lifecycle.viewModelScope
+import com.limaenaccion.feature_auth.data.model.Usuario
+import com.limaenaccion.feature_auth.data.repository.UsuarioRepository
+import kotlinx.coroutines.launch
+import java.util.UUID
+import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.network.model.RegisterRequest
+
 
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
@@ -51,7 +58,14 @@ data class RegisterUiState(
                 !neighborhood.isNullOrBlank()
 }
 
-class RegisterViewModel : ViewModel() {
+class RegisterViewModel(
+    application: android.app.Application
+) : androidx.lifecycle.AndroidViewModel(application) {
+
+    private val usuarioRepository: UsuarioRepository = com.limaenaccion.feature_auth.data.repository.UsuarioRepositoryImpl(
+        usuarioDao = com.limaenaccion.core.data.local.AppDatabase.getInstance(application).usuarioDao()
+    )
+
 
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
@@ -134,16 +148,120 @@ class RegisterViewModel : ViewModel() {
             return
         }
 
-        // Pasa a la siguiente fase (verificación por SMS US-02)
-        _uiState.value = state.copy(
-            step1Completed = true,
-            step2Completed = true,
-            registrationFinished = true
-        )
+        // Guardar en la Nube (Firestore) y en Caché (Room)
+        viewModelScope.launch {
+            val nuevoUsuario = Usuario(
+                uid = UUID.randomUUID().toString(),
+                fullName = state.fullName,
+                dni = state.dni,
+                gender = state.gender?.name ?: "",
+                email = state.email,
+                phoneNumber = state.phoneNumber,
+                district = state.district ?: "",
+                neighborhood = state.neighborhood ?: "",
+                createdAt = System.currentTimeMillis()
+            )
+
+            usuarioRepository.registrarUsuario(nuevoUsuario)
+
+            _uiState.value = state.copy(
+                step1Completed = true,
+                step2Completed = true,
+                registrationFinished = true
+            )
+        }
     }
 
-    // Métodos heredados por compatibilidad
-    fun onStep1ContinueClicked() { onRegisterSubmitClicked() }
-    fun onStep2ContinueClicked() { onRegisterSubmitClicked() }
-    fun onFinishRegistrationClicked() { onRegisterSubmitClicked() }
+    // 1. Validar solo Paso 1 (Datos Personales) y avanzar
+    fun onStep1ContinueClicked() {
+        val state = _uiState.value
+        val fullNameError = if (state.fullName.isBlank()) "Ingresa tu nombre completo" else null
+        val dniError = if (state.dni.length != 8) "El DNI debe tener 8 dígitos" else null
+        val genderError = if (state.gender == null) "Selecciona una opción" else null
+
+        if (fullNameError != null || dniError != null || genderError != null) {
+            _uiState.value = state.copy(
+                fullNameError = fullNameError,
+                dniError = dniError,
+                genderError = genderError
+            )
+            return
+        }
+        _uiState.value = state.copy(step1Completed = true)
+    }
+
+    // 2. Validar solo Paso 2 (Acceso y Contacto) y avanzar
+    fun onStep2ContinueClicked() {
+        val state = _uiState.value
+        val emailError = when {
+            state.email.isBlank() -> "Ingresa tu correo"
+            !EMAIL_REGEX.matches(state.email) -> "Correo inválido"
+            else -> null
+        }
+        val phoneError = if (state.phoneNumber.length != 9) "El celular debe tener 9 dígitos" else null
+        val passwordError = if (state.password.length < 8) "Mínimo 8 caracteres" else null
+
+        if (emailError != null || phoneError != null || passwordError != null) {
+            _uiState.value = state.copy(
+                emailError = emailError,
+                phoneError = phoneError,
+                passwordError = passwordError
+            )
+            return
+        }
+        _uiState.value = state.copy(step2Completed = true)
+    }
+
+    // 3. Finalizar y Registrar consumiendo API Service + Firebase + Room
+    fun onFinishRegistrationClicked() {
+        val state = _uiState.value
+        val districtError = if (state.district.isNullOrBlank()) "Selecciona tu distrito" else null
+        val neighborhoodError = if (state.neighborhood.isNullOrBlank()) "Selecciona tu vecindario" else null
+
+        if (districtError != null || neighborhoodError != null) {
+            _uiState.value = state.copy(
+                districtError = districtError,
+                neighborhoodError = neighborhoodError
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            // 1. Consumir API Service del Backend (Node.js) con Bcrypt
+            try {
+                RetrofitClient.instance.register(
+                    RegisterRequest(
+                        fullName = state.fullName,
+                        dni = state.dni,
+                        gender = state.gender?.name ?: "",
+                        email = state.email,
+                        phoneNumber = state.phoneNumber,
+                        password = state.password,
+                        district = state.district ?: "",
+                        neighborhood = state.neighborhood ?: ""
+                    )
+                )
+            } catch (e: Exception) {
+                // Si el backend no responde o falla, no bloqueamos la app (tolerancia a fallos)
+            }
+
+            // 2. Guardar en la Nube (Firebase Firestore) y en Caché Local (Room)
+            val nuevoUsuario = Usuario(
+                uid = UUID.randomUUID().toString(),
+                fullName = state.fullName,
+                dni = state.dni,
+                gender = state.gender?.name ?: "",
+                email = state.email,
+                phoneNumber = state.phoneNumber,
+                district = state.district ?: "",
+                neighborhood = state.neighborhood ?: "",
+                createdAt = System.currentTimeMillis()
+            )
+
+            usuarioRepository.registrarUsuario(nuevoUsuario)
+
+            _uiState.value = state.copy(registrationFinished = true)
+        }
+    }
+
 }

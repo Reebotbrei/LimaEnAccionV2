@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.lifecycle.viewModelScope
+import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.network.model.LoginRequest
+import kotlinx.coroutines.launch
 
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
@@ -13,7 +17,8 @@ data class LoginUiState(
     val isPasswordVisible: Boolean = false,
     val emailError: String? = null,
     val passwordError: String? = null,
-    val loginSuccess: Boolean = false
+    val loginSuccess: Boolean = false,
+    val isLoading: Boolean = false
 )
 
 class LoginViewModel : ViewModel() {
@@ -47,7 +52,35 @@ class LoginViewModel : ViewModel() {
             return
         }
 
-        // Etapa 1: sin backend todavía — se simula un login exitoso.
-        _uiState.value = state.copy(loginSuccess = true)
+        // Consumiendo API Service real para Inicio de Sesión
+        viewModelScope.launch {
+            _uiState.value = state.copy(isLoading = true)
+            try {
+                val response = RetrofitClient.instance.login(
+                    LoginRequest(
+                        email = state.email.trim(),
+                        password = state.password
+                    )
+                )
+
+                if (response.status == "success" && response.data != null) {
+                    _uiState.value = state.copy(
+                        isLoading = false,
+                        loginSuccess = true
+                    )
+                } else {
+                    _uiState.value = state.copy(
+                        isLoading = false,
+                        passwordError = response.message
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = state.copy(
+                    isLoading = false,
+                    passwordError = "Error al conectar con el servidor: ${e.localizedMessage ?: "Verifica tu conexión"}"
+                )
+            }
+        }
     }
+
 }

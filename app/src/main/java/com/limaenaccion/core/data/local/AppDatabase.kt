@@ -6,18 +6,21 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.limaenaccion.core.data.local.dao.ContactoDao
 import com.limaenaccion.core.data.local.dao.ReporteDao
+import com.limaenaccion.core.data.local.dao.UsuarioDao
 import com.limaenaccion.core.data.local.entities.ContactoEntity
 import com.limaenaccion.core.data.local.entities.ReporteEntity
+import com.limaenaccion.feature_auth.data.model.Usuario
 
 @Database(
-    entities = [ReporteEntity::class, ContactoEntity::class],
-    version = 2,
+    entities = [ReporteEntity::class, ContactoEntity::class, Usuario::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun reporteDao(): ReporteDao
     abstract fun contactoDao(): ContactoDao
+    abstract fun usuarioDao(): UsuarioDao
 
     companion object {
         @Volatile
