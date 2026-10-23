@@ -1,4 +1,4 @@
-package com.limaenaccion.feature_reports.data.model
+/*package com.limaenaccion.feature_reports.data.model
 
 import com.google.firebase.Timestamp
 
@@ -19,4 +19,4 @@ data class Reporte(
     val venceEn: Timestamp? = null,
     val estado: String = "ACTIVO",
     val esSos: Boolean = false
-)
+)*/

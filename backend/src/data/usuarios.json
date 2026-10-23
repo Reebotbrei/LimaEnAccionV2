@@ -1,0 +1,14 @@
+[
+  {
+    "uid": "usr_1792720814987",
+    "fullName": "Anthony Lozano Rubio",
+    "dni": "76346559",
+    "gender": "MASCULINO",
+    "email": "anthonylozano500@gmail.com",
+    "phoneNumber": "935695496",
+    "district": "San Juan de Lurigancho",
+    "neighborhood": "Bayóvar",
+    "passwordHash": "$2b$10$IYBves1LDVQwWYCWI6QnfesRZ99CAAMuF2ZCZgYxSSB4ZCRRNt8ym",
+    "createdAt": 1792720814987
+  }
+]

@@ -1,11 +1,10 @@
 const bcrypt = require('bcryptjs');
 
 // Hash de la API Key en la base de datos (clave original: "LIMA_EN_ACCION_API_KEY_2026")
-const API_KEY_HASH_BD = process.env.API_KEY_HASH || "$2a$10$7qBqC8m3g4X9JkYwP3bOe.mK8hN4rP0xY4vZ2kY1L8lQ5rX8m9P2K";
+const API_KEY_HASH_BD = process.env.API_KEY_HASH || "$2b$10$KJBy5txsmtfuiehKpjOaZulvx/J0d23RoWZrHux./KWqYIXOMecpO";
 
-/**
- Se intercepta las peticiones y valida la API Key con bcrypt
- */
+//Se intercepta las peticiones y valida la API Key con bcrypt
+
 async function validarApiKey(req, res, next) {
     const apiKeyRecibida = req.headers['x-api-key'];
 

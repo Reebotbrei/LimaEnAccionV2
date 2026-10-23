@@ -5,18 +5,16 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
 
-    /**
-     * URL pública del backend Node.js desplegado en la nube (Render, Railway, Fly.io, etc.).
-     * Permite que la aplicación funcione desde cualquier smartphone real o emulador con acceso a Internet.
-     * Reemplazar con la URL exacta que entregue tu proveedor de nube (ej. Render).
-     */
     const val CLOUD_BASE_URL = "https://limaenaccion-api.onrender.com/"
 
     // IP virtual para pruebas de desarrollo local en Android Emulator (10.0.2.2 -> localhost de la PC)
     const val EMULATOR_BASE_URL = "http://10.0.2.2:3000/"
 
-    // URL activa por defecto apuntando a la nube pública
-    var baseUrl: String = CLOUD_BASE_URL
+    // URL pública generada por Ngrok para pruebas en celular físico o emulador
+    const val NGROK_BASE_URL = "https://yanking-bounce-engorge.ngrok-free.dev/"
+
+    // URL activa apuntando a tu túnel seguro dec Ngrok
+    var baseUrl: String = NGROK_BASE_URL
         private set
 
     @Volatile
