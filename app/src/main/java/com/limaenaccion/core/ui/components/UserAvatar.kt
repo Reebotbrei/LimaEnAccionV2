@@ -63,7 +63,7 @@ fun UserAvatar(
 }
 
 private fun extractInitials(name: String): String {
-    val clean = name.trim()
+    val clean = name.replace("(", "").replace(")", "").trim()
     if (clean.isBlank()) return "V"
     val parts = clean.split("\\s+".toRegex()).filter { it.isNotBlank() }
     return when {

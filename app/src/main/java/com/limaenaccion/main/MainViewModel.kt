@@ -39,11 +39,29 @@ class MainViewModel @JvmOverloads constructor(
         initialValue = "ES"
     )
 
+    val activeSessionUid: StateFlow<String> = preferencesRepository.activeSessionUid.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ""
+    )
+
+    val rememberSession: StateFlow<Boolean> = preferencesRepository.rememberSession.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
     val isReady: Boolean get() = _skipLoadingScreen.value != null
 
     init {
         viewModelScope.launch {
             _skipLoadingScreen.value = preferencesRepository.skipLoadingScreen.first()
+        }
+    }
+
+    fun clearSession() {
+        viewModelScope.launch {
+            preferencesRepository.clearSession()
         }
     }
 }

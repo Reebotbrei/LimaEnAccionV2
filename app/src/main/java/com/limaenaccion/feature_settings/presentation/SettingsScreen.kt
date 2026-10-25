@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.limaenaccion.core.ui.components.DangerButton
 import com.limaenaccion.core.ui.components.MenuRow
+import com.limaenaccion.core.ui.components.ServerConfigCard
+import com.limaenaccion.core.ui.components.ServerStatusChip
 import com.limaenaccion.core.ui.components.SettingSegmentedRow
 import com.limaenaccion.core.ui.components.SettingSliderRow
 import com.limaenaccion.core.ui.components.SettingSwitchRow
@@ -280,7 +282,27 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // ==========================================
-        // 5. CUENTA Y DATOS PERSONALES (Ley N° 29733) (Pref #16)
+        // 5. CONEXIÓN AL SERVIDOR BACKEND
+        // ==========================================
+        SectionHeader("Servidor Backend")
+        ServerStatusChip(
+            serverUrl = uiState.serverUrl,
+            onClick = viewModel::onShowServerConfig
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (uiState.showServerConfig) {
+            ServerConfigCard(
+                currentUrl = uiState.serverUrl,
+                onUrlConfirmed = viewModel::onServerUrlChanged,
+                onDismiss = viewModel::onDismissServerConfig
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // ==========================================
+        // 6. CUENTA Y DATOS PERSONALES (Ley N° 29733) (Pref #16)
         // ==========================================
         SectionHeader(strings.sectionAccount)
 

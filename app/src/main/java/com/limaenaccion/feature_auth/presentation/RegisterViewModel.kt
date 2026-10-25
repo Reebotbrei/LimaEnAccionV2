@@ -1,27 +1,33 @@
 package com.limaenaccion.feature_auth.presentation
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.limaenaccion.core.data.local.AppDatabase
 import com.limaenaccion.core.data.local.entities.UsuarioEntity
 import com.limaenaccion.feature_auth.data.model.Gender
+import com.limaenaccion.feature_auth.data.model.Usuario
 import com.limaenaccion.feature_auth.data.repository.AuthActionResult
 import com.limaenaccion.feature_auth.data.repository.AuthErrorField
 import com.limaenaccion.feature_auth.data.repository.AuthLocalRepository
 import com.limaenaccion.feature_auth.data.repository.AuthLocalRepositoryImpl
+import com.limaenaccion.feature_auth.data.repository.UsuarioRepository
+import com.limaenaccion.feature_auth.data.repository.UsuarioRepositoryImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
-// Listas Mock — catálogo de zonas urbanas para residencia
+// Listas de distritos y vecindarios para registro y perfil
 val MOCK_DISTRICTS = listOf("San Juan de Lurigancho", "San Juan de Miraflores", "Comas", "Villa El Salvador", "Ate")
 val MOCK_NEIGHBORHOODS = listOf("Caja de Agua", "Zárate", "Mangomarca", "Bayóvar", "Canto Grande")
 
 data class RegisterUiState(
-    // Datos Personales
+    // Paso 1: Datos Personales
     val fullName: String = "",
     val dni: String = "",
     val gender: Gender? = null,
@@ -29,7 +35,7 @@ data class RegisterUiState(
     val dniError: String? = null,
     val genderError: String? = null,
 
-    // Datos de Acceso y Contacto
+    // Paso 2: Datos de Acceso y Contacto
     val email: String = "",
     val phoneNumber: String = "",
     val password: String = "",
@@ -38,7 +44,7 @@ data class RegisterUiState(
     val phoneError: String? = null,
     val passwordError: String? = null,
 
-    // Zona de Residencia
+    // Paso 3: Zona de Residencia
     val district: String? = null,
     val neighborhood: String? = null,
     val districtError: String? = null,
@@ -63,7 +69,10 @@ data class RegisterUiState(
 
 class RegisterViewModel @JvmOverloads constructor(
     application: Application,
-    private val authLocalRepository: AuthLocalRepository = AuthLocalRepositoryImpl(application)
+    private val authLocalRepository: AuthLocalRepository = AuthLocalRepositoryImpl(application),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(
+        usuarioDao = AppDatabase.getInstance(application).usuarioDao()
+    )
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -110,7 +119,7 @@ class RegisterViewModel @JvmOverloads constructor(
         _uiState.value = _uiState.value.copy(neighborhood = value, neighborhoodError = null, generalError = null)
     }
 
-    // Validación Unificada + Consumo del API Service Node.js + Sincronización SQLite
+    // Validación Unificada + Consumo del API Service Node.js + Firebase Cloud + Sincronización SQLite
     fun onRegisterSubmitClicked() {
         val state = _uiState.value
         if (state.isLoading) return
@@ -148,7 +157,7 @@ class RegisterViewModel @JvmOverloads constructor(
             return
         }
 
-        val nuevoUsuario = UsuarioEntity(
+        val nuevoUsuarioEntity = UsuarioEntity(
             correo = state.email.trim().lowercase(),
             dni = state.dni,
             nombreCompleto = state.fullName.trim(),
@@ -162,7 +171,27 @@ class RegisterViewModel @JvmOverloads constructor(
         _uiState.value = state.copy(isLoading = true, generalError = null)
 
         viewModelScope.launch {
-            when (val result = authLocalRepository.registerUser(nuevoUsuario)) {
+            // Sincronizar en Firebase Firestore de forma asíncrona
+            try {
+                val fbUser = Usuario(
+                    uid = UUID.randomUUID().toString(),
+                    fullName = state.fullName.trim(),
+                    dni = state.dni,
+                    gender = state.gender?.name ?: "",
+                    email = state.email.trim().lowercase(),
+                    phoneNumber = state.phoneNumber,
+                    district = state.district.orEmpty(),
+                    neighborhood = state.neighborhood.orEmpty(),
+                    createdAt = System.currentTimeMillis()
+                )
+                usuarioRepository.registrarUsuario(fbUser)
+                Log.d("REGISTER_FLOW", "✅ Usuario respaldado en Firebase Firestore")
+            } catch (e: Exception) {
+                Log.w("REGISTER_FLOW", "⚠️ Firebase Firestore no sincronizado (${e.message})")
+            }
+
+            // Consumir API Service de Node.js y registrar en SQLite local (Rúbricas b y c)
+            when (val result = authLocalRepository.registerUser(nuevoUsuarioEntity)) {
                 is AuthActionResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

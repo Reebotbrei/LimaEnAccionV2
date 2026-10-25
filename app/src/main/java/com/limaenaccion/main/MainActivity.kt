@@ -1,6 +1,7 @@
 package com.limaenaccion.main
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -14,12 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.preferences.PreferencesRepositoryImpl
 import com.limaenaccion.core.data.session.SessionManager
 import com.limaenaccion.core.navigation.NavGraph
 import com.limaenaccion.core.navigation.Screen
 import com.limaenaccion.core.ui.theme.LimaEnAccionTheme
 import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.core.util.getAppStrings
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -30,21 +33,30 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Regla "No recordar sesión": al iniciar en frío la app, cualquier sesión en memoria se limpia
-        if (savedInstanceState == null) {
-            SessionManager.clearSession()
+        // Detección y adaptación automática de IP en segundo plano al arrancar la app
+        lifecycleScope.launch {
+            val prefs = PreferencesRepositoryImpl(applicationContext)
+            val savedUrl = prefs.serverBaseUrl.first()
+            val detectedUrl = RetrofitClient.autoDetectAndAdapt(savedUrl)
+            prefs.setServerBaseUrl(detectedUrl)
+            Log.d("LIMA_CONFIG", "Backend URL configurada automáticamente: $detectedUrl")
+
+            // Regla "No recordar sesión": si el usuario no tiene activado "Recordar sesión", la sesión en RAM se limpia
+            val remember = prefs.rememberSession.first()
+            if (!remember && savedInstanceState == null) {
+                SessionManager.clearSession()
+            }
         }
 
         splashScreen.setKeepOnScreenCondition { !mainViewModel.isReady }
-
-        // Detección asíncrona automática del backend Node.js (USB / Wi-Fi LAN / Emulador / Nube)
-        testBackendConnection()
 
         setContent {
             val skipLoadingScreen by mainViewModel.skipLoadingScreen.collectAsState()
             val currentTheme by mainViewModel.theme.collectAsState()
             val currentFontSize by mainViewModel.fontSize.collectAsState()
             val currentLanguage by mainViewModel.language.collectAsState()
+            val activeSessionUid by mainViewModel.activeSessionUid.collectAsState()
+            val rememberSession by mainViewModel.rememberSession.collectAsState()
 
             if (skipLoadingScreen != null) {
                 LimaEnAccionTheme(
@@ -56,23 +68,23 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.background
                         ) {
-                            NavGraph(
-                                startDestination = if (skipLoadingScreen == true) {
+                            val startDestination = when {
+                                rememberSession && activeSessionUid.isNotBlank() ->
+                                    Screen.Main.route
+                                skipLoadingScreen == true ->
                                     Screen.Emergency.route
-                                } else {
+                                else ->
                                     Screen.Splash.route
-                                }
+                            }
+
+                            NavGraph(
+                                startDestination = startDestination,
+                                onLogout = { mainViewModel.clearSession() }
                             )
                         }
                     }
                 }
             }
-        }
-    }
-
-    private fun testBackendConnection() {
-        lifecycleScope.launch {
-            RetrofitClient.autoSelectReachableBackend()
         }
     }
 }

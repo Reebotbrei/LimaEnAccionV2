@@ -55,4 +55,17 @@ interface PreferencesRepository {
 
     // Pref #16 — Eliminación de Datos / Preferencias (Ley N° 29733)
     suspend fun clearAllPreferences()
+
+    // Config — URL base del servidor (IP dinámica)
+    val serverBaseUrl: Flow<String>
+    suspend fun setServerBaseUrl(url: String)
+
+    // Sesión — Recordar sesión y UID activo
+    val rememberSession: Flow<Boolean>
+    suspend fun setRememberSession(remember: Boolean)
+
+    val activeSessionUid: Flow<String>
+    suspend fun setActiveSessionUid(uid: String)
+
+    suspend fun clearSession()
 }

@@ -9,6 +9,7 @@ import com.limaenaccion.core.data.local.dao.ReporteDao
 import com.limaenaccion.core.data.preferences.model.DoNotDisturbPrefs
 import com.limaenaccion.core.data.preferences.PreferencesRepository
 import com.limaenaccion.core.data.preferences.PreferencesRepositoryImpl
+import com.limaenaccion.core.data.session.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +45,9 @@ data class SettingsUiState(
     val overrideSilentModeForSos: Boolean = true,
     // Pref #14 - Nombre del contacto de auxilio principal
     val primaryContactName: String? = null,
+    // Pref #15 - URL del Servidor Backend (IP dinámica)
+    val serverUrl: String = com.limaenaccion.core.data.network.RetrofitClient.baseUrl,
+    val showServerConfig: Boolean = false,
     // Información general
     val registeredZone: String = "Caja de Agua, SJL",
     val appVersion: String = "v2.2.0",
@@ -80,10 +84,16 @@ class SettingsViewModel @JvmOverloads constructor(
             val types = preferencesRepository.incidentTypesFilter.first()
             val dnd = preferencesRepository.doNotDisturb.first()
             val overrideSilent = preferencesRepository.overrideSilentModeForSos.first()
+            val savedServerUrl = preferencesRepository.serverBaseUrl.first()
 
             val primaryContact = withContext(Dispatchers.IO) {
                 contactoDao.obtenerContactoPrincipal().first()
             }
+
+            val user = SessionManager.currentUser.value
+            val zone = if (user != null) {
+                listOf(user.urbanizacion, user.distrito).filter { it.isNotBlank() }.joinToString(", ")
+            } else "Caja de Agua, SJL"
 
             _uiState.value = _uiState.value.copy(
                 theme = theme,
@@ -97,6 +107,8 @@ class SettingsViewModel @JvmOverloads constructor(
                 incidentTypesFilter = types,
                 doNotDisturb = dnd,
                 overrideSilentModeForSos = overrideSilent,
+                serverUrl = savedServerUrl,
+                registeredZone = zone.ifBlank { "Lima, Perú" },
                 primaryContactName = primaryContact?.let { "${it.nombre} (${it.telefono})" }
             )
         }
@@ -203,6 +215,23 @@ class SettingsViewModel @JvmOverloads constructor(
     fun onToggleOverrideSilentMode(override: Boolean) {
         _uiState.value = _uiState.value.copy(overrideSilentModeForSos = override)
         viewModelScope.launch { preferencesRepository.setOverrideSilentModeForSos(override) }
+    }
+
+    // Configuración Servidor Backend (IP dinámica)
+    fun onShowServerConfig() {
+        _uiState.value = _uiState.value.copy(showServerConfig = true)
+    }
+
+    fun onDismissServerConfig() {
+        _uiState.value = _uiState.value.copy(showServerConfig = false)
+    }
+
+    fun onServerUrlChanged(newUrl: String) {
+        viewModelScope.launch {
+            preferencesRepository.setServerBaseUrl(newUrl)
+            com.limaenaccion.core.data.network.RetrofitClient.setBaseUrl(newUrl)
+            _uiState.value = _uiState.value.copy(serverUrl = newUrl, showServerConfig = false)
+        }
     }
 
     // Sesión

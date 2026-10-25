@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "359019362432",
+    "project_id": "limaenaccion",
+    "storage_bucket": "limaenaccion.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:359019362432:android:ef144207895abd06fa4e65",
+        "android_client_info": {
+          "package_name": "com.limaenaccion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAgMG-MtSkNAh6nVl-Uz74n3zFgobXGLA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

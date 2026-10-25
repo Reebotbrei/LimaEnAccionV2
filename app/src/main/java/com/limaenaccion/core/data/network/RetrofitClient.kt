@@ -1,48 +1,62 @@
 package com.limaenaccion.core.data.network
 
+import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.Request
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // Túnel USB directo si se ejecuta `adb reverse tcp:3000 tcp:3000`
-    const val LOCAL_USB_URL = "http://127.0.0.1:3000/"
-
-    // IP en red local Wi-Fi/LAN de la PC para pruebas desde un smartphone físico
-    const val LOCAL_LAN_URL = "http://192.168.18.27:3000/"
-
-    // IP virtual para pruebas en Android Emulator (10.0.2.2 -> localhost de la PC)
     const val EMULATOR_BASE_URL = "http://10.0.2.2:3000/"
-
-    // URL pública en caso de despliegue en la nube (Render / Railway)
+    const val LOCAL_USB_URL = "http://127.0.0.1:3000/"
+    const val LOCAL_LAN_URL = "http://192.168.18.27:3000/"
+    const val LOCAL_WIFI_BASE_URL = "http://192.168.0.158:3000/"
     const val CLOUD_BASE_URL = "https://limaenaccion-api.onrender.com/"
 
-    // URL activa inicial apuntando a la red local / emulador
-    var baseUrl: String = LOCAL_LAN_URL
+    const val API_KEY = "LIMA_EN_ACCION_API_KEY_2026"
+
+    /** Detecta si el dispositivo es un emulador de Android */
+    fun isEmulator(): Boolean {
+        return (Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+                || "google_sdk" == Build.PRODUCT)
+    }
+
+    // IP automática inicial según el entorno
+    var baseUrl: String = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_LAN_URL
         private set
 
-    private val defaultHttpClient: OkHttpClient by lazy {
+    @Volatile
+    private var _instance: ApiService? = null
+
+    // Cliente HTTP con inyección automática de x-api-key y logging en vivo en Logcat
+    private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val requestBuilder = original.newBuilder()
+                    .header("x-api-key", API_KEY)
+                val request = requestBuilder.build()
+                Log.d("API_NETWORK", "🚀 [CONSUMIENDO API] ${request.method()} -> ${request.url()}")
+                val response = chain.proceed(request)
+                Log.d("API_NETWORK", "📥 [RESPUESTA API] Código: ${response.code()} (${if (response.isSuccessful) "OK" else "Error"}) de ${request.url()}")
+                response
+            }
             .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(6, TimeUnit.SECONDS)
             .writeTimeout(6, TimeUnit.SECONDS)
             .build()
     }
-
-    private val probeHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(1500, TimeUnit.MILLISECONDS)
-            .readTimeout(2000, TimeUnit.MILLISECONDS)
-            .build()
-    }
-
-    @Volatile
-    private var _instance: ApiService? = null
 
     val instance: ApiService
         get() = _instance ?: synchronized(this) {
@@ -55,44 +69,76 @@ object RetrofitClient {
         synchronized(this) {
             _instance = createService(sanitizedUrl)
         }
+        Log.d("AUTO_IP", "BaseUrl actualizada a: $sanitizedUrl")
     }
 
-    fun createService(
-        url: String = baseUrl,
-        client: OkHttpClient = defaultHttpClient
-    ): ApiService {
+    fun createService(url: String = baseUrl): ApiService {
         val sanitizedUrl = if (url.endsWith("/")) url else "$url/"
         return Retrofit.Builder()
             .baseUrl(sanitizedUrl)
-            .client(client)
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ApiService::class.java)
     }
 
     /**
-     * Detecta automáticamente cuál endpoint de Node.js está activo
-     * (Cable USB adb reverse, Red Wi-Fi LAN, Emulador Android o Nube) y lo fija como activo.
+     * Detección y adaptación automática de IP en segundo plano:
+     * Prueba los candidatos más probables según el entorno (Emulador, Celular USB, Wi-Fi LAN o Nube)
+     * y fija automáticamente la primera URL que responda.
      */
-    suspend fun autoSelectReachableBackend(): String? = withContext(Dispatchers.IO) {
-        val candidates = listOf(
-            LOCAL_USB_URL,
-            LOCAL_LAN_URL,
-            EMULATOR_BASE_URL,
-            CLOUD_BASE_URL
-        )
+    suspend fun autoDetectAndAdapt(savedPrefUrl: String? = null): String = withContext(Dispatchers.IO) {
+        val candidates = mutableListOf<String>()
+
+        // 1. Si se especificó una preferencia guardada previa
+        if (!savedPrefUrl.isNullOrBlank()) {
+            val sanitized = if (savedPrefUrl.endsWith("/")) savedPrefUrl else "$savedPrefUrl/"
+            candidates.add(sanitized)
+        }
+
+        // 2. Si es emulador, 10.0.2.2 es la prioridad #1
+        if (isEmulator()) {
+            candidates.add(EMULATOR_BASE_URL)
+        }
+
+        // 3. IPs de desarrollo local (USB adb reverse y Wi-Fi)
+        candidates.add(LOCAL_USB_URL)
+        candidates.add(LOCAL_LAN_URL)
+        candidates.add(LOCAL_WIFI_BASE_URL)
+        if (!isEmulator()) {
+            candidates.add(EMULATOR_BASE_URL)
+        }
+
+        // 4. Servidor en la nube (Render)
+        candidates.add(CLOUD_BASE_URL)
+
+        val probeClient = OkHttpClient.Builder()
+            .connectTimeout(1500, TimeUnit.MILLISECONDS)
+            .readTimeout(1500, TimeUnit.MILLISECONDS)
+            .build()
+
         for (candidate in candidates) {
             try {
-                val probeService = createService(url = candidate, client = probeHttpClient)
-                val response = probeService.testConnection()
-                setBaseUrl(candidate)
-                Log.d("API_NODE", "✅ Servidor Node.js detectado en $candidate: ${response.mensaje}")
-                return@withContext candidate
+                val testUrl = if (candidate.endsWith("/")) "${candidate}api/test" else "$candidate/api/test"
+                val request = Request.Builder().url(testUrl).get().build()
+                val response = probeClient.newCall(request).execute()
+                if (response.isSuccessful) {
+                    response.close()
+                    Log.i("AUTO_IP", "✅ Servidor Node.js detectado automáticamente y activo: $candidate")
+                    setBaseUrl(candidate)
+                    return@withContext candidate
+                }
+                response.close()
             } catch (_: Exception) {
-                // Continúa probando el siguiente candidato
+                // Siguiente candidato
             }
         }
-        Log.w("API_NODE", "⚠️ Ningún servidor Node.js respondió en USB/LAN/Emulador/Nube.")
-        null
+
+        val fallbackDefault = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_LAN_URL
+        setBaseUrl(fallbackDefault)
+        Log.i("AUTO_IP", "Entorno configurado automáticamente a $fallbackDefault (Tolerancia a fallos con Firebase activa).")
+        fallbackDefault
     }
+
+    suspend fun autoSelectReachableBackend(): String? = autoDetectAndAdapt()
 }

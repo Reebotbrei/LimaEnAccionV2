@@ -83,9 +83,9 @@ fun IncidentDetailScreen(
                             Spacer(modifier = Modifier.width(8.dp))
 
                             val (badgeBg, badgeFg) = when (incident.incidentStatus) {
-                                IncidentStatus.REPORTADO -> Color(0xFFFEF3C7) to Color(0xFFB45309)
-                                IncidentStatus.EN_ATENCION -> Color(0xFFDBEAFE) to Color(0xFF1D4ED8)
-                                IncidentStatus.RESUELTO -> Color(0xFFDCFCE7) to Color(0xFF15803D)
+                                IncidentStatus.REPORTADO -> Color(0xFFD97706).copy(alpha = 0.16f) to Color(0xFFD97706)
+                                IncidentStatus.EN_ATENCION -> Color(0xFF2563EB).copy(alpha = 0.16f) to Color(0xFF2563EB)
+                                IncidentStatus.RESUELTO -> Color(0xFF16A34A).copy(alpha = 0.16f) to Color(0xFF16A34A)
                             }
                             Surface(shape = RoundedCornerShape(50), color = badgeBg) {
                                 Text(

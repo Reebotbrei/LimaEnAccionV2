@@ -2,6 +2,7 @@ package com.limaenaccion.core.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.limaenaccion.core.data.network.RetrofitClient
 import com.limaenaccion.core.data.preferences.model.DoNotDisturbPrefs
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,11 @@ class PreferencesRepositoryImpl(context: Context) : PreferencesRepository {
         private const val KEY_HORA_FIN = "hora_fin"
         private const val KEY_ANULAR_SILENCIO_SOS = "anular_silencio_sos"
         private const val KEY_SOS_PHYSICAL_BUTTON_ENABLED = "sos_physical_button_enabled"
+
+        // Configuración de Servidor Backend (IP dinámica) y Sesión de Anthony
+        private const val KEY_SERVER_BASE_URL = "server_base_url"
+        private const val KEY_REMEMBER_SESSION = "remember_session"
+        private const val KEY_ACTIVE_SESSION_UID = "active_session_uid"
 
         private val DEFAULT_INCIDENT_TYPES = setOf(
             "ROBO",
@@ -82,6 +88,15 @@ class PreferencesRepositoryImpl(context: Context) : PreferencesRepository {
     private val _sosPhysicalButtonEnabled = MutableStateFlow(readSosPhysicalButtonEnabled())
     override val sosPhysicalButtonEnabled: Flow<Boolean> = _sosPhysicalButtonEnabled.asStateFlow()
 
+    private val _serverBaseUrl = MutableStateFlow(readServerBaseUrl())
+    override val serverBaseUrl: Flow<String> = _serverBaseUrl.asStateFlow()
+
+    private val _rememberSession = MutableStateFlow(readRememberSession())
+    override val rememberSession: Flow<Boolean> = _rememberSession.asStateFlow()
+
+    private val _activeSessionUid = MutableStateFlow(readActiveSessionUid())
+    override val activeSessionUid: Flow<String> = _activeSessionUid.asStateFlow()
+
     // Referencia fuerte al listener para evitar recolección de basura en el WeakHashMap de SharedPreferences
     private val preferenceChangeListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -98,6 +113,9 @@ class PreferencesRepositoryImpl(context: Context) : PreferencesRepository {
                 KEY_NO_MOLESTAR, KEY_HORA_INICIO, KEY_HORA_FIN -> _doNotDisturb.value = readDoNotDisturb()
                 KEY_ANULAR_SILENCIO_SOS -> _overrideSilentModeForSos.value = readOverrideSilentModeForSos()
                 KEY_SOS_PHYSICAL_BUTTON_ENABLED -> _sosPhysicalButtonEnabled.value = readSosPhysicalButtonEnabled()
+                KEY_SERVER_BASE_URL -> _serverBaseUrl.value = readServerBaseUrl()
+                KEY_REMEMBER_SESSION -> _rememberSession.value = readRememberSession()
+                KEY_ACTIVE_SESSION_UID -> _activeSessionUid.value = readActiveSessionUid()
                 null -> refreshAllFlows()
             }
         }
@@ -131,20 +149,29 @@ class PreferencesRepositoryImpl(context: Context) : PreferencesRepository {
         sharedPreferences.getInt(KEY_RADIO_ALERTAS_METROS, 1000)
 
     private fun readIncidentTypesFilter(): Set<String> =
-        sharedPreferences.getStringSet(KEY_TIPOS_INCIDENTE, DEFAULT_INCIDENT_TYPES)?.toSet()
-            ?: DEFAULT_INCIDENT_TYPES
+        sharedPreferences.getStringSet(KEY_TIPOS_INCIDENTE, DEFAULT_INCIDENT_TYPES) ?: DEFAULT_INCIDENT_TYPES
 
-    private fun readDoNotDisturb(): DoNotDisturbPrefs = DoNotDisturbPrefs(
-        enabled = sharedPreferences.getBoolean(KEY_NO_MOLESTAR, false),
-        startHour = sharedPreferences.getInt(KEY_HORA_INICIO, 22),
-        endHour = sharedPreferences.getInt(KEY_HORA_FIN, 7)
-    )
+    private fun readDoNotDisturb(): DoNotDisturbPrefs {
+        val enabled = sharedPreferences.getBoolean(KEY_NO_MOLESTAR, false)
+        val startHour = sharedPreferences.getInt(KEY_HORA_INICIO, 22)
+        val endHour = sharedPreferences.getInt(KEY_HORA_FIN, 7)
+        return DoNotDisturbPrefs(enabled, startHour, endHour)
+    }
 
     private fun readOverrideSilentModeForSos(): Boolean =
         sharedPreferences.getBoolean(KEY_ANULAR_SILENCIO_SOS, true)
 
     private fun readSosPhysicalButtonEnabled(): Boolean =
         sharedPreferences.getBoolean(KEY_SOS_PHYSICAL_BUTTON_ENABLED, false)
+
+    private fun readServerBaseUrl(): String =
+        sharedPreferences.getString(KEY_SERVER_BASE_URL, RetrofitClient.baseUrl) ?: RetrofitClient.baseUrl
+
+    private fun readRememberSession(): Boolean =
+        sharedPreferences.getBoolean(KEY_REMEMBER_SESSION, false)
+
+    private fun readActiveSessionUid(): String =
+        sharedPreferences.getString(KEY_ACTIVE_SESSION_UID, "") ?: ""
 
     private fun refreshAllFlows() {
         _theme.value = readTheme()
@@ -159,6 +186,9 @@ class PreferencesRepositoryImpl(context: Context) : PreferencesRepository {
         _doNotDisturb.value = readDoNotDisturb()
         _overrideSilentModeForSos.value = readOverrideSilentModeForSos()
         _sosPhysicalButtonEnabled.value = readSosPhysicalButtonEnabled()
+        _serverBaseUrl.value = readServerBaseUrl()
+        _rememberSession.value = readRememberSession()
+        _activeSessionUid.value = readActiveSessionUid()
     }
 
     override suspend fun setTheme(theme: String) {
@@ -225,8 +255,36 @@ class PreferencesRepositoryImpl(context: Context) : PreferencesRepository {
         _sosPhysicalButtonEnabled.value = enabled
     }
 
+    override suspend fun setServerBaseUrl(url: String) {
+        val sanitized = if (url.endsWith("/")) url else "$url/"
+        sharedPreferences.edit().putString(KEY_SERVER_BASE_URL, sanitized).apply()
+        _serverBaseUrl.value = sanitized
+    }
+
+    override suspend fun setRememberSession(remember: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_REMEMBER_SESSION, remember).apply()
+        _rememberSession.value = remember
+    }
+
+    override suspend fun setActiveSessionUid(uid: String) {
+        sharedPreferences.edit().putString(KEY_ACTIVE_SESSION_UID, uid).apply()
+        _activeSessionUid.value = uid
+    }
+
+    override suspend fun clearSession() {
+        sharedPreferences.edit()
+            .remove(KEY_REMEMBER_SESSION)
+            .remove(KEY_ACTIVE_SESSION_UID)
+            .apply()
+        _rememberSession.value = false
+        _activeSessionUid.value = ""
+    }
+
     override suspend fun clearAllPreferences() {
         sharedPreferences.edit().clear().apply()
         refreshAllFlows()
     }
 }
+
+/** Alias para mantener compatibilidad con cualquier import previo */
+typealias PreferenceRepositoryImpl = PreferencesRepositoryImpl

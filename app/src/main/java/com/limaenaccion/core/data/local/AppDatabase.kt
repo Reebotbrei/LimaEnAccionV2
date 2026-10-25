@@ -10,14 +10,16 @@ import com.limaenaccion.core.data.local.dao.UsuarioDao
 import com.limaenaccion.core.data.local.entities.ContactoEntity
 import com.limaenaccion.core.data.local.entities.ReporteEntity
 import com.limaenaccion.core.data.local.entities.UsuarioEntity
+import com.limaenaccion.feature_auth.data.model.Usuario
 
 @Database(
     entities = [
         ReporteEntity::class,
         ContactoEntity::class,
-        UsuarioEntity::class
+        UsuarioEntity::class,
+        Usuario::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

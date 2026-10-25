@@ -38,6 +38,10 @@ object SessionManager {
         _currentUser.value = user
     }
 
+    fun setCurrentUser(user: UsuarioEntity) {
+        startTransientSession(user)
+    }
+
     fun updateProfilePhoto(avatar: AvatarOption, bitmap: Bitmap? = null) {
         _currentAvatar.value = avatar
         _customPhotoBitmap.value = bitmap

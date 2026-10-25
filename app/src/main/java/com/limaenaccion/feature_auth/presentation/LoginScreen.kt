@@ -1,8 +1,15 @@
 package com.limaenaccion.feature_auth.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -25,6 +32,8 @@ import com.limaenaccion.core.ui.components.AppLogo
 import com.limaenaccion.core.ui.components.BrandLayout
 import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.ui.components.ServerConfigCard
+import com.limaenaccion.core.ui.components.ServerStatusChip
 import com.limaenaccion.core.util.LocalAppStrings
 
 @Composable
@@ -36,6 +45,7 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(uiState.loginSuccess) {
         if (uiState.loginSuccess) onLoginSuccess()
@@ -46,7 +56,10 @@ fun LoginScreen(
         color = MaterialTheme.colorScheme.background
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -63,7 +76,31 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // ── Chip indicador de servidor activo (Render / LAN / Emulador) ──
+            Spacer(modifier = Modifier.height(10.dp))
+            ServerStatusChip(
+                serverUrl = uiState.serverUrl,
+                onClick = viewModel::onShowServerConfig
+            )
+
+            // ── Panel colapsable de configuración de IP en caliente ──
+            AnimatedVisibility(
+                visible = uiState.showServerConfig,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ServerConfigCard(
+                        currentUrl = uiState.serverUrl,
+                        onUrlConfirmed = viewModel::onServerUrlChanged,
+                        onDismiss = viewModel::onDismissServerConfig
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(strings.loginEmailLabel, style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(4.dp))
@@ -109,6 +146,26 @@ fun LoginScreen(
                 Text(strings.loginForgotPasswordBtn, color = MaterialTheme.colorScheme.primary)
             }
 
+            // ── Opción de Recordar Sesión ──
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.onRememberSessionChange(!uiState.rememberSession) }
+                    .padding(vertical = 4.dp)
+            ) {
+                Checkbox(
+                    checked = uiState.rememberSession,
+                    onCheckedChange = viewModel::onRememberSessionChange
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (strings.loginEmailLabel == "Correo electrónico") "Recordar sesión" else "Remember session",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
             if (uiState.generalError != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -119,12 +176,25 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            PrimaryButton(
-                text = if (uiState.isLoading) "..." else strings.loginSubmitBtn,
-                onClick = viewModel::onLoginClicked,
-                enabled = !uiState.isLoading
-            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            if (uiState.isLoading) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (strings.loginEmailLabel == "Correo electrónico") "Verificando credenciales..." else "Verifying credentials...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                PrimaryButton(
+                    text = strings.loginSubmitBtn,
+                    onClick = viewModel::onLoginClicked,
+                    enabled = !uiState.isLoading
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
             Row {

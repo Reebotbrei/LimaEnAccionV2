@@ -34,16 +34,20 @@ module.exports = {
 
     obtenerPorCorreo: (correo) => {
         if (!correo) return undefined;
-        const correoLimpio = correo.trim().toLowerCase();
+        const correoLimpio = String(correo).trim().toLowerCase();
         const usuarios = leerUsuariosDesdeDisco();
-        return usuarios.find(u => (u.correo || '').trim().toLowerCase() === correoLimpio);
+        return usuarios.find(u => {
+            const email1 = (u.correo || '').trim().toLowerCase();
+            const email2 = (u.email || '').trim().toLowerCase();
+            return email1 === correoLimpio || email2 === correoLimpio;
+        });
     },
 
     obtenerPorDni: (dni) => {
         if (!dni) return undefined;
-        const dniLimpio = dni.trim();
+        const dniLimpio = String(dni).trim();
         const usuarios = leerUsuariosDesdeDisco();
-        return usuarios.find(u => (u.dni || '').trim() === dniLimpio);
+        return usuarios.find(u => String(u.dni || '').trim() === dniLimpio);
     },
 
     guardarNuevo: (nuevoUsuario) => {

@@ -46,7 +46,8 @@ import com.limaenaccion.feature_profile.presentation.UpdateAddressScreen
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Screen.Splash.route
+    startDestination: String = Screen.Splash.route,
+    onLogout: () -> Unit = {}
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
 
@@ -170,6 +171,7 @@ fun NavGraph(
                 onManageContacts = { navController.navigate(Screen.ManageContacts.route) },
                 onLogout = {
                     SessionManager.clearSession()
+                    onLogout()
                     navController.navigate(Screen.Login.route) {
                         // Limpia el backstack
                         popUpTo(navController.graph.id) { inclusive = true }

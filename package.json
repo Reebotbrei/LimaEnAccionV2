@@ -1,0 +1,11 @@
+{
+  "name": "lima-en-accion-root",
+  "version": "1.0.0",
+  "description": "Root configuration to guarantee deployment on Render",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "build": "cd backend && npm install",
+    "postinstall": "cd backend && npm install"
+  }
+}

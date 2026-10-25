@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +29,7 @@ import com.limaenaccion.core.ui.components.UserAvatar
 import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.data.model.IncidentStatus
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IncidentCard(
     incident: Incident,
@@ -144,9 +146,9 @@ fun IncidentCard(
 
                     // Badge de Estado del Incidente (🟡 Reportado | 🔵 En atención | 🟢 Resuelto)
                     val (statusBg, statusFg) = when (incident.incidentStatus) {
-                        IncidentStatus.REPORTADO -> Color(0xFFFEF3C7) to Color(0xFFB45309)
-                        IncidentStatus.EN_ATENCION -> Color(0xFFDBEAFE) to Color(0xFF1D4ED8)
-                        IncidentStatus.RESUELTO -> Color(0xFFDCFCE7) to Color(0xFF15803D)
+                        IncidentStatus.REPORTADO -> Color(0xFFD97706).copy(alpha = 0.16f) to Color(0xFFD97706)
+                        IncidentStatus.EN_ATENCION -> Color(0xFF2563EB).copy(alpha = 0.16f) to Color(0xFF2563EB)
+                        IncidentStatus.RESUELTO -> Color(0xFF16A34A).copy(alpha = 0.16f) to Color(0xFF16A34A)
                     }
 
                     Surface(
@@ -249,19 +251,23 @@ fun IncidentCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Fila 7: ACCIONES CÍVICAS (Lenguaje Cívico y Herramienta de Verificación Ciudadana)
-                Row(
+                // Fila 7: ACCIONES CÍVICAS (Diseño 100% Responsivo y Adaptativo a Temas con FlowRow)
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Acción 1: "Lo presencié" (Interactivo)
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = if (hasWitnessed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        color = if (hasWitnessed) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                        },
                         border = BorderStroke(
                             1.dp,
-                            if (hasWitnessed) MaterialTheme.colorScheme.primary else Color.Transparent
+                            if (hasWitnessed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         ),
                         modifier = Modifier.clickable { onToggleWitness?.invoke() }
                     ) {
@@ -273,7 +279,7 @@ fun IncidentCard(
                                 imageVector = Icons.Filled.Visibility,
                                 contentDescription = "Confirmar como testigo presencial",
                                 tint = if (hasWitnessed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -288,7 +294,8 @@ fun IncidentCard(
                     // Acción 2: "Aportar información" (Abre el detalle para sumar testimonios)
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                         modifier = Modifier.clickable(onClick = onClick)
                     ) {
                         Row(
@@ -311,27 +318,45 @@ fun IncidentCard(
                         }
                     }
 
-                    // Acción 3: "Reportar falsedad" (Discreto)
+                    // Acción 3: "Reportar falsedad" (Completamente adaptativo a temas y responsivo)
+                    val reportContainerColor = if (isReportedAsFalse) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    }
+                    val reportBorder = if (isReportedAsFalse) {
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    } else {
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    }
+                    val reportContentColor = if (isReportedAsFalse) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = if (isReportedAsFalse) Color(0xFFFEE2E2) else Color.Transparent,
+                        color = reportContainerColor,
+                        border = reportBorder,
                         modifier = Modifier.clickable { onReportFalsehood?.invoke() }
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Flag,
                                 contentDescription = "Reportar contenido falso o spam",
-                                tint = if (isReportedAsFalse) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                tint = reportContentColor,
                                 modifier = Modifier.size(15.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
                                 text = if (isReportedAsFalse) "Reportado" else "Reportar",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (isReportedAsFalse) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                fontWeight = if (isReportedAsFalse) FontWeight.Bold else FontWeight.Medium,
+                                color = reportContentColor
                             )
                         }
                     }
