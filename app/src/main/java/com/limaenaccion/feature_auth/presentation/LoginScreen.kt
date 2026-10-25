@@ -1,8 +1,8 @@
 package com.limaenaccion.feature_auth.presentation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -13,14 +13,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,8 +32,7 @@ import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
 import com.limaenaccion.core.ui.components.ServerConfigCard
 import com.limaenaccion.core.util.LocalAppStrings
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(
@@ -50,6 +45,20 @@ fun LoginScreen(
     val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
     val haptic = LocalHapticFeedback.current
+
+    val logoInteractionSource = remember { MutableInteractionSource() }
+    val isLogoPressed by logoInteractionSource.collectIsPressedAsState()
+    var logoTapCount by remember { mutableStateOf(0) }
+    var lastTapTime by remember { mutableStateOf(0L) }
+
+    // ── Gesto 1: Sostener presionado durante 5 segundos continuos ──
+    LaunchedEffect(isLogoPressed) {
+        if (isLogoPressed) {
+            delay(5000L)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            viewModel.onShowServerConfig()
+        }
+    }
 
     LaunchedEffect(uiState.loginSuccess) {
         if (uiState.loginSuccess) onLoginSuccess()
@@ -67,26 +76,26 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // ── Logo e identidad (Pulsación sostenida por 5 segundos abre configuración técnica) ──
+            // ── Logo e identidad (5 seg presionado O 5 toques rápidos abre ajustes de desarrollador) ──
             Box(
-                modifier = Modifier.pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        try {
-                            withTimeout(5000L) {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    if (event.changes.all { !it.pressed }) {
-                                        break
-                                    }
-                                }
-                            }
-                        } catch (e: TimeoutCancellationException) {
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = logoInteractionSource,
+                        indication = null
+                    ) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastTapTime < 600) {
+                            logoTapCount++
+                        } else {
+                            logoTapCount = 1
+                        }
+                        lastTapTime = now
+                        if (logoTapCount >= 5) {
+                            logoTapCount = 0
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.onShowServerConfig()
                         }
                     }
-                }
             ) {
                 AppLogo(
                     variant = LogoVariant.FULL_BRAND,
