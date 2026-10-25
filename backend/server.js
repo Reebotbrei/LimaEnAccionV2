@@ -1,5 +1,6 @@
 const os = require('os');
 const app = require('./src/app');
+const usuariosStore = require('./src/data/usuariosStore');
 
 const PORT = process.env.PORT || 3000;
 
@@ -15,7 +16,7 @@ function obtenerIpLocal() {
     return 'localhost';
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
     const ipLan = obtenerIpLocal();
     console.log(`=========================================================`);
     console.log(` 🚀 Servidor Lima en Acción corriendo en el puerto ${PORT}`);
@@ -27,4 +28,13 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(` 👥 Usuarios activos:   http://localhost:${PORT}/api/v1/auth/usuarios`);
     console.log(` 📋 Endpoint reportes:  http://localhost:${PORT}/api/v1/reportes`);
     console.log(`=========================================================`);
+
+    // Sincronización inicial automática con Firebase Cloud Firestore
+    try {
+        console.log(`🔥 [FIREBASE SYNC] Iniciando sincronización con Firebase Cloud Firestore...`);
+        const usuarios = await usuariosStore.sincronizarConFirestore();
+        console.log(`🔥 [FIREBASE SYNC] Sincronización completada: ${usuarios.length} cuentas activas en la nube.`);
+    } catch (e) {
+        console.warn(`⚠️ [FIREBASE SYNC] Error en sincronización inicial:`, e.message);
+    }
 });

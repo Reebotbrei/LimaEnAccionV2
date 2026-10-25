@@ -96,7 +96,7 @@ async function registrar(req, res) {
             createdAt: Date.now()
         };
 
-        const guardado = usuariosStore.guardarNuevo(nuevoUsuario);
+        const guardado = await usuariosStore.guardarNuevo(nuevoUsuario);
         console.log(`[BACKEND AUTH] Nuevo vecino registrado con Bcrypt: ${guardado.correo} (${guardado.nombreCompleto} - DNI ${guardado.dni})`);
 
         return res.status(201).json({
@@ -129,7 +129,11 @@ async function login(req, res) {
             });
         }
 
-        const usuario = usuariosStore.obtenerPorCorreo(correo);
+        let usuario = usuariosStore.obtenerPorCorreo(correo);
+        if (!usuario) {
+            // Intento de búsqueda en tiempo real en Firebase Firestore
+            usuario = await usuariosStore.obtenerPorCorreoAsync(correo);
+        }
         if (!usuario) {
             console.log(`[BACKEND AUTH] ⚠️ Intento de login fallido (correo no registrado): ${correo}`);
             return res.status(401).json({
@@ -180,9 +184,10 @@ async function login(req, res) {
 /**
  * GET /api/v1/auth/usuarios
  */
-function listarUsuarios(req, res) {
+async function listarUsuarios(req, res) {
     try {
-        const usuarios = usuariosStore.obtenerTodos().map(sanitizarUsuario);
+        const rawUsuarios = await usuariosStore.obtenerTodosAsync();
+        const usuarios = rawUsuarios.map(sanitizarUsuario);
         return res.status(200).json({
             status: "success",
             total: usuarios.length,
@@ -237,7 +242,7 @@ async function actualizar(req, res) {
         }
 
         const clave = correo || dni;
-        const usuarioActualizado = usuariosStore.actualizarUsuario(clave, datos);
+        const usuarioActualizado = await usuariosStore.actualizarUsuario(clave, datos);
         if (!usuarioActualizado) {
             return res.status(404).json({ status: "error", message: "Usuario no encontrado" });
         }
@@ -265,7 +270,7 @@ async function eliminarCuenta(req, res) {
             return res.status(400).json({ status: "error", message: "Correo o DNI es requerido" });
         }
 
-        const eliminado = usuariosStore.eliminarUsuario(clave);
+        const eliminado = await usuariosStore.eliminarUsuario(clave);
         if (!eliminado) {
             return res.status(404).json({ status: "error", message: "Usuario no encontrado" });
         }
