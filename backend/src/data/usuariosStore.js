@@ -57,14 +57,15 @@ module.exports = {
         return nuevoUsuario;
     },
 
-    actualizarUsuario: (correo, datosActualizados) => {
-        if (!correo) return null;
-        const correoLimpio = String(correo).trim().toLowerCase();
+    actualizarUsuario: (correoOrDni, datosActualizados) => {
+        if (!correoOrDni) return null;
+        const clave = String(correoOrDni).trim().toLowerCase();
         const usuarios = leerUsuariosDesdeDisco();
         const index = usuarios.findIndex(u => {
             const email1 = (u.correo || '').trim().toLowerCase();
             const email2 = (u.email || '').trim().toLowerCase();
-            return email1 === correoLimpio || email2 === correoLimpio;
+            const dni = String(u.dni || '').trim().toLowerCase();
+            return email1 === clave || email2 === clave || dni === clave;
         });
         if (index === -1) return null;
         usuarios[index] = { ...usuarios[index], ...datosActualizados };

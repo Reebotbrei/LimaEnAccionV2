@@ -108,14 +108,21 @@ class UpdateAddressViewModel @JvmOverloads constructor(
                 try {
                     RetrofitClient.instance.updateProfile(
                         RegisterRequest(
-                            dni = updatedUser.dni,
+                            fullName = updatedUser.nombreCompleto,
                             nombreCompleto = updatedUser.nombreCompleto,
+                            dni = updatedUser.dni,
+                            gender = updatedUser.genero,
                             genero = updatedUser.genero,
+                            email = updatedUser.correo,
                             correo = updatedUser.correo,
+                            phoneNumber = updatedUser.telefono,
                             telefono = updatedUser.telefono,
                             contrasena = updatedUser.contrasena,
+                            password = updatedUser.contrasena,
                             distrito = updatedUser.distrito,
-                            urbanizacion = updatedUser.urbanizacion
+                            district = updatedUser.distrito,
+                            urbanizacion = updatedUser.urbanizacion,
+                            neighborhood = updatedUser.urbanizacion
                         )
                     )
                     Log.d("UPDATE_ADDRESS", "✅ Dirección actualizada en API Service Node.js")

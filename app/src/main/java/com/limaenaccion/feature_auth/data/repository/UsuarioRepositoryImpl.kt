@@ -125,31 +125,66 @@ class UsuarioRepositoryImpl(
         runCatching {
             try {
                 val colecciones = listOf(coleccionUsuarios, coleccionUsers)
-                val updates = mapOf(
-                    "fullName" to usuario.fullName,
-                    "nombreCompleto" to usuario.fullName,
-                    "phoneNumber" to usuario.phoneNumber,
-                    "telefono" to usuario.phoneNumber,
-                    "gender" to usuario.gender,
-                    "genero" to usuario.gender,
-                    "district" to usuario.district,
-                    "distrito" to usuario.district,
-                    "neighborhood" to usuario.neighborhood,
-                    "urbanizacion" to usuario.neighborhood
-                )
+                val updates = mutableMapOf<String, Any>()
+                if (usuario.fullName.isNotBlank()) {
+                    updates["fullName"] = usuario.fullName
+                    updates["nombreCompleto"] = usuario.fullName
+                }
+                if (usuario.phoneNumber.isNotBlank()) {
+                    updates["phoneNumber"] = usuario.phoneNumber
+                    updates["telefono"] = usuario.phoneNumber
+                }
+                if (usuario.gender.isNotBlank()) {
+                    updates["gender"] = usuario.gender
+                    updates["genero"] = usuario.gender
+                }
+                if (usuario.district.isNotBlank()) {
+                    updates["district"] = usuario.district
+                    updates["distrito"] = usuario.district
+                }
+                if (usuario.neighborhood.isNotBlank()) {
+                    updates["neighborhood"] = usuario.neighborhood
+                    updates["urbanizacion"] = usuario.neighborhood
+                }
 
-                if (usuario.uid.isNotBlank()) {
-                    coleccionUsuarios.document(usuario.uid).update(updates).await()
-                } else {
-                    for (col in colecciones) {
-                        val query = col.whereEqualTo("email", usuario.email.trim().lowercase()).get().await()
-                        for (doc in query.documents) {
+                var actualizado = false
+                val emailLimpio = usuario.email.trim().lowercase()
+
+                for (col in colecciones) {
+                    if (emailLimpio.isNotBlank()) {
+                        val queryEmail = col.whereEqualTo("email", emailLimpio).get().await()
+                        for (doc in queryEmail.documents) {
                             doc.reference.update(updates).await()
+                            actualizado = true
+                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por email en ${col.id}: ${doc.id}")
                         }
+                        val queryCorreo = col.whereEqualTo("correo", emailLimpio).get().await()
+                        for (doc in queryCorreo.documents) {
+                            doc.reference.update(updates).await()
+                            actualizado = true
+                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por correo en ${col.id}: ${doc.id}")
+                        }
+                    }
+
+                    if (!actualizado && usuario.dni.isNotBlank()) {
+                        val queryDni = col.whereEqualTo("dni", usuario.dni.trim()).get().await()
+                        for (doc in queryDni.documents) {
+                            doc.reference.update(updates).await()
+                            actualizado = true
+                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por DNI en ${col.id}: ${doc.id}")
+                        }
+                    }
+
+                    if (!actualizado && usuario.uid.isNotBlank() && !usuario.uid.contains("@")) {
+                        try {
+                            col.document(usuario.uid).update(updates).await()
+                            actualizado = true
+                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por UID en ${col.id}: ${usuario.uid}")
+                        } catch (_: Exception) {}
                     }
                 }
             } catch (e: Exception) {
-                Log.w("UPDATE_FIREBASE", "No se pudo actualizar en Firestore remoto (${e.message})")
+                Log.e("UPDATE_FIREBASE", "Error al actualizar en Firestore: ${e.message}", e)
             }
             usuarioDao.guardarUsuario(usuario)
             Unit

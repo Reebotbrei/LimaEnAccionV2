@@ -2,14 +2,15 @@
   {
     "id": "usr_1792911474307",
     "dni": "23456789",
-    "nombreCompleto": "Judinaldo",
+    "nombreCompleto": "Serruchonaldo",
     "genero": "Anthony",
     "correo": "naldo@gmail.com",
     "telefono": "123456789",
     "contrasena": "123456789",
     "distrito": "Comas",
     "urbanizacion": "Caja de Agua",
-    "creadoEn": "2026-10-25T06:57:54.307Z"
+    "creadoEn": "2026-10-25T06:57:54.307Z",
+    "fullName": "Serruchonaldo"
   },
   {
     "id": "usr_1792720814987",

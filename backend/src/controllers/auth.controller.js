@@ -202,32 +202,42 @@ function listarUsuarios(req, res) {
 async function actualizar(req, res) {
     try {
         const body = req.body || {};
-        const correo = body.email || body.correo;
-        if (!correo) {
-            return res.status(400).json({ status: "error", message: "Correo es requerido" });
+        const correo = (body.email || body.correo || '').trim().toLowerCase();
+        const dni = String(body.dni || '').trim();
+
+        if (!correo && !dni) {
+            return res.status(400).json({ status: "error", message: "Correo o DNI es requerido" });
         }
+
         const datos = {};
-        if (body.fullName || body.nombreCompleto) {
-            datos.nombreCompleto = body.fullName || body.nombreCompleto;
-            datos.fullName = datos.nombreCompleto;
+        const nombre = (body.fullName || body.nombreCompleto || '').trim();
+        if (nombre) {
+            datos.nombreCompleto = nombre;
+            datos.fullName = nombre;
         }
-        if (body.phoneNumber || body.telefono) {
-            datos.telefono = body.phoneNumber || body.telefono;
-            datos.phoneNumber = datos.telefono;
+        const fono = (body.phoneNumber || body.telefono || '').trim();
+        if (fono) {
+            datos.telefono = fono;
+            datos.phoneNumber = fono;
         }
-        if (body.gender || body.genero) {
-            datos.genero = body.gender || body.genero;
-            datos.gender = datos.genero;
+        const gen = (body.gender || body.genero || '').trim();
+        if (gen) {
+            datos.genero = gen;
+            datos.gender = gen;
         }
-        if (body.district || body.distrito) {
-            datos.distrito = body.district || body.distrito;
-            datos.district = datos.distrito;
+        const dist = (body.district || body.distrito || '').trim();
+        if (dist) {
+            datos.distrito = dist;
+            datos.district = dist;
         }
-        if (body.neighborhood || body.urbanizacion) {
-            datos.urbanizacion = body.neighborhood || body.urbanizacion;
-            datos.neighborhood = datos.urbanizacion;
+        const urb = (body.neighborhood || body.urbanizacion || '').trim();
+        if (urb) {
+            datos.urbanizacion = urb;
+            datos.neighborhood = urb;
         }
-        const usuarioActualizado = usuariosStore.actualizarUsuario(correo, datos);
+
+        const clave = correo || dni;
+        const usuarioActualizado = usuariosStore.actualizarUsuario(clave, datos);
         if (!usuarioActualizado) {
             return res.status(404).json({ status: "error", message: "Usuario no encontrado" });
         }
