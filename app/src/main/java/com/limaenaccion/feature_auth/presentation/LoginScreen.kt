@@ -1,11 +1,7 @@
 package com.limaenaccion.feature_auth.presentation
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,18 +18,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.limaenaccion.core.ui.components.AppLogo
 import com.limaenaccion.core.ui.components.BrandLayout
 import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
 import com.limaenaccion.core.ui.components.ServerConfigCard
-import com.limaenaccion.core.ui.components.ServerStatusChip
 import com.limaenaccion.core.util.LocalAppStrings
 
 @Composable
@@ -63,12 +61,23 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            AppLogo(
-                variant = LogoVariant.FULL_BRAND,
-                layout = BrandLayout.ICON_TOP,
-                size = 76.dp,
-                useSquircleInFullBrand = true
-            )
+            // ── Logo e identidad (Pulsación larga abre configuración técnica de servidor) ──
+            Box(
+                modifier = Modifier.pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            viewModel.onShowServerConfig()
+                        }
+                    )
+                }
+            ) {
+                AppLogo(
+                    variant = LogoVariant.FULL_BRAND,
+                    layout = BrandLayout.ICON_TOP,
+                    size = 76.dp,
+                    useSquircleInFullBrand = true
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 strings.loginSubtitle,
@@ -76,31 +85,7 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // ── Chip indicador de servidor activo (Render / LAN / Emulador) ──
-            Spacer(modifier = Modifier.height(10.dp))
-            ServerStatusChip(
-                serverUrl = uiState.serverUrl,
-                onClick = viewModel::onShowServerConfig
-            )
-
-            // ── Panel colapsable de configuración de IP en caliente ──
-            AnimatedVisibility(
-                visible = uiState.showServerConfig,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
-            ) {
-                Column {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    ServerConfigCard(
-                        currentUrl = uiState.serverUrl,
-                        onUrlConfirmed = viewModel::onServerUrlChanged,
-                        onDismiss = viewModel::onDismissServerConfig
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Text(strings.loginEmailLabel, style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(4.dp))
@@ -204,6 +189,26 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable(onClick = onRegisterClick)
+                )
+            }
+        }
+    }
+
+    // ── Diálogo modal flotante de desarrollador (sólo accesible mediante pulsación larga en el logo) ──
+    if (uiState.showServerConfig) {
+        Dialog(
+            onDismissRequest = viewModel::onDismissServerConfig,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                ServerConfigCard(
+                    currentUrl = uiState.serverUrl,
+                    onUrlConfirmed = viewModel::onServerUrlChanged,
+                    onDismiss = viewModel::onDismissServerConfig
                 )
             }
         }

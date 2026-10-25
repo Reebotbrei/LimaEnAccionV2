@@ -42,10 +42,10 @@ fun ServerConfigCard(
     var inputUrl by remember { mutableStateOf(currentUrl) }
 
     val presets = listOf(
-        Triple("☁️ Render (Nube)", Icons.Filled.Cloud, "https://limaenaccion-api.onrender.com/"),
-        Triple("💻 Emulador Android", Icons.Filled.Computer, "http://10.0.2.2:3000/"),
-        Triple("📱 Red Wi-Fi Local (PC)", Icons.Filled.Wifi, "http://192.168.18.27:3000/"),
-        Triple("🔌 Cable USB (adb reverse)", Icons.Filled.Usb, "http://127.0.0.1:3000/")
+        Triple("Render (Nube)", Icons.Filled.Cloud, "https://limaenaccion-api.onrender.com/"),
+        Triple("Emulador Android", Icons.Filled.Computer, "http://10.0.2.2:3000/"),
+        Triple("Red Wi-Fi Local (PC)", Icons.Filled.Wifi, "http://192.168.18.27:3000/"),
+        Triple("Cable USB (adb reverse)", Icons.Filled.Usb, "http://127.0.0.1:3000/")
     )
 
     Surface(
