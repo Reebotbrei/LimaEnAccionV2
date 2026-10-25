@@ -1,7 +1,8 @@
 package com.limaenaccion.feature_auth.presentation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,7 +19,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -33,6 +36,8 @@ import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
 import com.limaenaccion.core.ui.components.ServerConfigCard
 import com.limaenaccion.core.util.LocalAppStrings
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 @Composable
 fun LoginScreen(
@@ -44,6 +49,7 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(uiState.loginSuccess) {
         if (uiState.loginSuccess) onLoginSuccess()
@@ -61,14 +67,25 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // ── Logo e identidad (Pulsación larga abre configuración técnica de servidor) ──
+            // ── Logo e identidad (Pulsación sostenida por 5 segundos abre configuración técnica) ──
             Box(
                 modifier = Modifier.pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        try {
+                            withTimeout(5000L) {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.all { !it.pressed }) {
+                                        break
+                                    }
+                                }
+                            }
+                        } catch (e: TimeoutCancellationException) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.onShowServerConfig()
                         }
-                    )
+                    }
                 }
             ) {
                 AppLogo(
