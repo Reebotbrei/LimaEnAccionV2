@@ -2,15 +2,19 @@
   {
     "id": "usr_1792911474307",
     "dni": "23456789",
-    "nombreCompleto": "Serruchonaldo",
-    "genero": "Anthony",
+    "nombreCompleto": "naldonaldo",
+    "genero": "Masculino",
     "correo": "naldo@gmail.com",
     "telefono": "123456789",
     "contrasena": "123456789",
     "distrito": "Comas",
     "urbanizacion": "Caja de Agua",
     "creadoEn": "2026-10-25T06:57:54.307Z",
-    "fullName": "Serruchonaldo"
+    "fullName": "naldonaldo",
+    "phoneNumber": "123456789",
+    "gender": "Masculino",
+    "district": "Comas",
+    "neighborhood": "Caja de Agua"
   },
   {
     "id": "usr_1792720814987",
