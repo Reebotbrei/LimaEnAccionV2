@@ -1,7 +1,6 @@
 package com.limaenaccion.main
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -15,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.session.SessionManager
 import com.limaenaccion.core.navigation.NavGraph
 import com.limaenaccion.core.navigation.Screen
 import com.limaenaccion.core.ui.theme.LimaEnAccionTheme
@@ -30,9 +30,14 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        // Regla "No recordar sesión": al iniciar en frío la app, cualquier sesión en memoria se limpia
+        if (savedInstanceState == null) {
+            SessionManager.clearSession()
+        }
+
         splashScreen.setKeepOnScreenCondition { !mainViewModel.isReady }
 
-        // Prueba asíncrona no bloqueante de conexión con el backend
+        // Detección asíncrona automática del backend Node.js (USB / Wi-Fi LAN / Emulador / Nube)
         testBackendConnection()
 
         setContent {
@@ -67,12 +72,7 @@ class MainActivity : ComponentActivity() {
 
     private fun testBackendConnection() {
         lifecycleScope.launch {
-            try {
-                val response = RetrofitClient.instance.testConnection()
-                Log.d("API_TEST", "¡Éxito total! Mensaje del servidor: ${response.mensaje}")
-            } catch (e: Exception) {
-                Log.w("API_TEST", "Servidor backend no disponible en esta red o puerto: ${e.message}")
-            }
+            RetrofitClient.autoSelectReachableBackend()
         }
     }
 }

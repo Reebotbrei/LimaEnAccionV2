@@ -1,5 +1,6 @@
 package com.limaenaccion.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -10,6 +11,9 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.compose.NavHost
@@ -39,6 +43,36 @@ fun MainScreen(
 ) {
     val innerNavController = rememberNavController()
     val strings = LocalAppStrings.current
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+
+    // Intercepta la flecha atrás del celular en la pantalla principal para evitar salir abruptamente
+    BackHandler(enabled = true) {
+        showLogoutConfirmDialog = true
+    }
+
+    if (showLogoutConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirmDialog = false },
+            title = { Text(strings.logoutDialogTitle) },
+            text = { Text(strings.logoutDialogText) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutConfirmDialog = false
+                        onLogout()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(strings.logoutConfirmBtn)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirmDialog = false }) {
+                    Text(strings.cancelBtn)
+                }
+            }
+        )
+    }
 
     val bottomNavItems = listOf(
         BottomNavItem("tab_home", strings.navHome, Icons.Filled.Home),

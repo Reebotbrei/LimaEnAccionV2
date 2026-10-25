@@ -25,6 +25,7 @@ import com.limaenaccion.core.ui.components.AppLogo
 import com.limaenaccion.core.ui.components.BrandLayout
 import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.util.LocalAppStrings
 
 @Composable
 fun LoginScreen(
@@ -34,6 +35,7 @@ fun LoginScreen(
     viewModel: LoginViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
 
     LaunchedEffect(uiState.loginSuccess) {
         if (uiState.loginSuccess) onLoginSuccess()
@@ -56,14 +58,14 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                "Inicia sesión para continuar",
+                strings.loginSubtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Text("Correo electrónico", style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())
+            Text(strings.loginEmailLabel, style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(4.dp))
             OutlinedTextField(
                 value = uiState.email,
@@ -79,7 +81,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Contraseña", style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())
+            Text(strings.loginPasswordLabel, style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(4.dp))
             OutlinedTextField(
                 value = uiState.password,
@@ -90,7 +92,7 @@ fun LoginScreen(
                     IconButton(onClick = viewModel::onTogglePasswordVisibility) {
                         Icon(
                             imageVector = if (uiState.isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = if (uiState.isPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                            contentDescription = if (uiState.isPasswordVisible) "Ocultar" else "Mostrar"
                         )
                     }
                 },
@@ -104,17 +106,31 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
             TextButton(onClick = onForgotPasswordClick, modifier = Modifier.align(Alignment.End)) {
-                Text("¿Olvidaste tu contraseña?", color = MaterialTheme.colorScheme.primary)
+                Text(strings.loginForgotPasswordBtn, color = MaterialTheme.colorScheme.primary)
+            }
+
+            if (uiState.generalError != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = uiState.generalError ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            PrimaryButton(text = "Iniciar sesión", onClick = viewModel::onLoginClicked)
+            PrimaryButton(
+                text = if (uiState.isLoading) "..." else strings.loginSubmitBtn,
+                onClick = viewModel::onLoginClicked,
+                enabled = !uiState.isLoading
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
             Row {
-                Text("¿No tienes una cuenta? ", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(strings.loginNoAccountPrompt, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    "Regístrate",
+                    strings.loginRegisterLink,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable(onClick = onRegisterClick)

@@ -1,6 +1,13 @@
 package com.limaenaccion.feature_profile.presentation
 
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -20,16 +27,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.limaenaccion.core.data.session.AvatarOption
 import com.limaenaccion.core.ui.components.PrimaryButton
 
-private val avatarColors = mapOf(
+val avatarColors = mapOf(
     AvatarOption.DEFAULT to Color(0xFF8B5CF6),
     AvatarOption.AVATAR_1 to Color(0xFF8B5CF6),
     AvatarOption.AVATAR_2 to Color(0xFF6366F1),
     AvatarOption.AVATAR_3 to Color(0xFFEC4899)
 )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangeProfilePhotoScreen(
@@ -37,33 +49,94 @@ fun ChangeProfilePhotoScreen(
     viewModel: ChangeProfilePhotoViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    LaunchedEffect(uiState.savedPhoto) { if (uiState.savedPhoto) onNavigateBack() }
+    val context = LocalContext.current
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val bitmap = if (Build.VERSION.SDK_INT < 28) {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+            } else {
+                val source = ImageDecoder.createSource(context.contentResolver, it)
+                ImageDecoder.decodeBitmap(source)
+            }
+            viewModel.onCustomPhotoSelected(bitmap)
+        }
+    }
+
+    LaunchedEffect(uiState.savedPhoto) {
+        if (uiState.savedPhoto) onNavigateBack()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Cambiar foto de perfil") },
-                navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Volver") } }
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                }
             )
         },
-        bottomBar = { PrimaryButton(text = "Guardar foto", onClick = viewModel::onSaveClicked, modifier = Modifier.padding(16.dp)) }
+        bottomBar = {
+            PrimaryButton(
+                text = "Guardar foto",
+                onClick = viewModel::onSaveClicked,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(96.dp).clip(CircleShape).background(avatarColors.getValue(uiState.selectedAvatar)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(avatarColors.getValue(uiState.selectedAvatar)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (uiState.customPhoto != null) {
+                    Image(
+                        bitmap = uiState.customPhoto!!.asImageBitmap(),
+                        contentDescription = "Foto de perfil seleccionada",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Person,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             }
+
             Spacer(modifier = Modifier.height(24.dp))
-            Text("AVATARES DISPONIBLES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "AVATARES DISPONIBLES",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(12.dp))
+
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 listOf(AvatarOption.AVATAR_1, AvatarOption.AVATAR_2, AvatarOption.AVATAR_3).forEach { avatar ->
-                    val selected = uiState.selectedAvatar == avatar
+                    val selected = uiState.selectedAvatar == avatar && uiState.customPhoto == null
                     Box(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(CircleShape)
                             .background(avatarColors.getValue(avatar))
-                            .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                            .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
                             .clickable { viewModel.onAvatarSelected(avatar) },
                         contentAlignment = Alignment.Center
                     ) {
@@ -71,16 +144,29 @@ fun ChangeProfilePhotoScreen(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(24.dp))
+
             Surface(
                 shape = RoundedCornerShape(50),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                onClick = { }
+                onClick = { galleryLauncher.launch("image/*") }
             ) {
-                Row(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.CameraAlt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Tomar foto o subir desde galería", color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Tomar foto o subir desde galería",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

@@ -34,6 +34,7 @@ import com.limaenaccion.core.ui.components.BrandLayout
 import com.limaenaccion.core.ui.components.DropdownField
 import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.feature_auth.data.model.Gender
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -45,6 +46,7 @@ fun RegisterScreen(
     onLoginClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
 
     // Si la validación se completa con éxito, avanza a la verificación por SMS
@@ -57,7 +59,7 @@ fun RegisterScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Crear cuenta", fontWeight = FontWeight.Bold) },
+                title = { Text(strings.registerScreenTitle, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -95,7 +97,7 @@ fun RegisterScreen(
 
                 // Mensaje introductorio
                 Text(
-                    text = "Regístrate para proteger a tu comunidad y recibir alertas vecinales en tiempo real.",
+                    text = strings.registerIntroNotice,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -103,13 +105,13 @@ fun RegisterScreen(
                 // ───────────────────────────────────────────────
                 // 1. DATOS PERSONALES
                 // ───────────────────────────────────────────────
-                SectionHeader("DATOS PERSONALES")
+                SectionHeader(strings.registerSectionPersonal)
 
                 OutlinedTextField(
                     value = uiState.fullName,
                     onValueChange = viewModel::onFullNameChange,
-                    label = { Text("Nombre completo *") },
-                    placeholder = { Text("Ej. María Quispe Rojas") },
+                    label = { Text(strings.registerFullNameLabel) },
+                    placeholder = { Text(strings.registerFullNamePlaceholder) },
                     leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                     singleLine = true,
                     isError = uiState.fullNameError != null,
@@ -120,7 +122,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = uiState.dni,
                     onValueChange = viewModel::onDniChange,
-                    label = { Text("DNI (8 dígitos) *") },
+                    label = { Text(strings.registerDniLabel) },
                     placeholder = { Text("12345678") },
                     leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = null) },
                     singleLine = true,
@@ -133,7 +135,7 @@ fun RegisterScreen(
                 // Género con chips responsivos
                 Column {
                     Text(
-                        text = "Género *",
+                        text = strings.registerGenderLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -144,10 +146,15 @@ fun RegisterScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Gender.entries.forEach { gender ->
+                            val genderText = when (gender) {
+                                Gender.MASCULINO -> strings.registerGenderMale
+                                Gender.FEMENINO -> strings.registerGenderFemale
+                                else -> gender.label
+                            }
                             FilterChip(
                                 selected = uiState.gender == gender,
                                 onClick = { viewModel.onGenderChange(gender) },
-                                label = { Text(gender.label) }
+                                label = { Text(genderText) }
                             )
                         }
                     }
@@ -166,12 +173,12 @@ fun RegisterScreen(
                 // ───────────────────────────────────────────────
                 // 2. CONTACTO Y ACCESO
                 // ───────────────────────────────────────────────
-                SectionHeader("ACCESO Y CONTACTO")
+                SectionHeader(strings.registerSectionAccess)
 
                 OutlinedTextField(
                     value = uiState.email,
                     onValueChange = viewModel::onEmailChange,
-                    label = { Text("Correo electrónico *") },
+                    label = { Text("${strings.loginEmailLabel} *") },
                     placeholder = { Text("vecino.lima@gmail.com") },
                     leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
                     singleLine = true,
@@ -184,7 +191,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = uiState.phoneNumber,
                     onValueChange = viewModel::onPhoneNumberChange,
-                    label = { Text("Celular (9 dígitos) *") },
+                    label = { Text(strings.registerPhoneLabel) },
                     placeholder = { Text("987654321") },
                     prefix = { Text("+51 ") },
                     leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
@@ -198,8 +205,8 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = uiState.password,
                     onValueChange = viewModel::onPasswordChange,
-                    label = { Text("Contraseña *") },
-                    placeholder = { Text("Mínimo 8 caracteres") },
+                    label = { Text("${strings.loginPasswordLabel} *") },
+                    placeholder = { Text(strings.registerPasswordHelp) },
                     leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                     trailingIcon = {
                         IconButton(onClick = viewModel::onTogglePasswordVisibility) {
@@ -222,11 +229,11 @@ fun RegisterScreen(
                 // ───────────────────────────────────────────────
                 // 3. ZONA DE RESIDENCIA
                 // ───────────────────────────────────────────────
-                SectionHeader("ZONA DE RESIDENCIA")
+                SectionHeader(strings.registerSectionResidence)
 
                 DropdownField(
                     selectedValue = uiState.district,
-                    placeholder = "Selecciona tu distrito *",
+                    placeholder = strings.registerDistrictPlaceholder,
                     options = MOCK_DISTRICTS,
                     isError = uiState.districtError != null,
                     errorMessage = uiState.districtError,
@@ -236,7 +243,7 @@ fun RegisterScreen(
 
                 DropdownField(
                     selectedValue = uiState.neighborhood,
-                    placeholder = "Selecciona tu urbanización o barrio *",
+                    placeholder = strings.registerNeighborhoodPlaceholder,
                     options = MOCK_NEIGHBORHOODS,
                     isError = uiState.neighborhoodError != null,
                     errorMessage = uiState.neighborhoodError,
@@ -244,12 +251,22 @@ fun RegisterScreen(
                     onOptionSelected = viewModel::onNeighborhoodChange
                 )
 
+                if (uiState.generalError != null) {
+                    Text(
+                        text = uiState.generalError ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Botón principal de registro responsivo
                 PrimaryButton(
-                    text = "Registrarme y verificar SMS",
+                    text = if (uiState.isLoading) "..." else strings.registerSubmitBtn,
                     onClick = viewModel::onRegisterSubmitClicked,
+                    enabled = !uiState.isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -262,12 +279,12 @@ fun RegisterScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "¿Ya tienes una cuenta? ",
+                        text = strings.registerAlreadyHaveAccount,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "Inicia sesión",
+                        text = strings.registerLoginLink,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium,

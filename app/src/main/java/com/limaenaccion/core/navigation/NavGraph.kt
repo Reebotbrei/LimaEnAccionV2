@@ -12,12 +12,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.limaenaccion.core.data.session.SessionManager
 import com.limaenaccion.main.MainScreen
 import com.limaenaccion.feature_alerts.presentation.IncidentDetailScreen
 import com.limaenaccion.feature_auth.presentation.ForgotPasswordScreen
 import com.limaenaccion.feature_auth.presentation.LoginScreen
 import com.limaenaccion.feature_auth.presentation.NewPasswordScreen
-import com.limaenaccion.feature_auth.presentation.RegisterStep1Screen
+import com.limaenaccion.feature_auth.presentation.RegisterScreen
 import com.limaenaccion.feature_auth.presentation.RegisterStep2Screen
 import com.limaenaccion.feature_auth.presentation.RegisterStep3Screen
 import com.limaenaccion.feature_auth.presentation.RegisterViewModel
@@ -92,10 +93,10 @@ fun NavGraph(
             composable(Screen.RegisterStep1.route) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Screen.RegisterGraph.route) }
                 val registerViewModel: RegisterViewModel = viewModel(parentEntry)
-                RegisterStep1Screen(
+                RegisterScreen(
                     viewModel = registerViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onContinue = { navController.navigate(Screen.RegisterStep2.route) },
+                    onContinueToVerification = { navController.navigate(Screen.RegisterVerification.route) },
                     onLoginClick = { navController.popBackStack(Screen.Login.route, false) }
                 )
             }
@@ -123,7 +124,14 @@ fun NavGraph(
                 val registerState by registerViewModel.uiState.collectAsState()
                 SmsVerificationScreen(
                     phoneNumber = registerState.phoneNumber,
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = {
+                        registerViewModel.onResetRegistrationFinished()
+                        navController.popBackStack()
+                    },
+                    onCancelRegistration = {
+                        registerViewModel.onResetRegistrationFinished()
+                        navController.popBackStack(Screen.Login.route, false)
+                    },
                     onVerified = {
                         navController.navigate(Screen.LocationPermission.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
@@ -161,6 +169,7 @@ fun NavGraph(
                 onReportHistory = { navController.navigate(Screen.ReportHistory.route) },
                 onManageContacts = { navController.navigate(Screen.ManageContacts.route) },
                 onLogout = {
+                    SessionManager.clearSession()
                     navController.navigate(Screen.Login.route) {
                         // Limpia el backstack
                         popUpTo(navController.graph.id) { inclusive = true }
@@ -233,7 +242,7 @@ fun NavGraph(
                 ReportDetailsScreen(
                     viewModel = reportViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onTakePhoto = { navController.navigate(Screen.ReportCamera.route) },
+                    onTakePhoto = { /* La cámara se abre directamente desde la vista */ },
                     onPublished = { navController.navigate(Screen.ReportSuccess.route) }
                 )
             }

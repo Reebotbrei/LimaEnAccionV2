@@ -1,12 +1,13 @@
 package com.limaenaccion.feature_auth.presentation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.util.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,10 +32,17 @@ fun SmsVerificationScreen(
     phoneNumber: String,
     onNavigateBack: () -> Unit,
     onVerified: () -> Unit,
+    onCancelRegistration: () -> Unit = onNavigateBack,
     viewModel: SmsVerificationViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalAppStrings.current
     val focusRequesters = remember { List(6) { FocusRequester() } }
+
+    // Intercepta la flecha atrás del celular para volver a la pantalla de registro
+    BackHandler(enabled = true) {
+        onNavigateBack()
+    }
 
     LaunchedEffect(uiState.verified) {
         if (uiState.verified) onVerified()
@@ -42,9 +51,16 @@ fun SmsVerificationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Column { Text("Verificación"); Text("Código de seguridad", style = MaterialTheme.typography.labelSmall) } },
+                title = {
+                    Column {
+                        Text("Verificación")
+                        Text("Código de seguridad", style = MaterialTheme.typography.labelSmall)
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Volver") }
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -54,16 +70,26 @@ fun SmsVerificationScreen(
             )
         },
         bottomBar = {
-            PrimaryButton(text = "Verificar y Acceder", onClick = viewModel::onVerifyClicked, modifier = Modifier.padding(16.dp))
+            PrimaryButton(
+                text = "Verificar y Acceder",
+                onClick = viewModel::onVerifyClicked,
+                modifier = Modifier.padding(16.dp)
+            )
         }
     ) { paddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             Box(
-                modifier = Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Filled.Sms, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -95,7 +121,9 @@ fun SmsVerificationScreen(
                         textStyle = TextStyle(textAlign = TextAlign.Center, fontSize = 18.sp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = uiState.codeError != null,
-                        modifier = Modifier.size(48.dp).focusRequester(focusRequesters[index])
+                        modifier = Modifier
+                            .size(48.dp)
+                            .focusRequester(focusRequesters[index])
                     )
                 }
             }
@@ -124,6 +152,26 @@ fun SmsVerificationScreen(
                     style = MaterialTheme.typography.labelSmall
                 )
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Enlaces para corregir número o cancelar
+            Text(
+                text = strings.smsWrongNumberBtn,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.clickable(onClick = onNavigateBack)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = strings.smsCancelRegistrationBtn,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.clickable(onClick = onCancelRegistration)
+            )
         }
     }
 }

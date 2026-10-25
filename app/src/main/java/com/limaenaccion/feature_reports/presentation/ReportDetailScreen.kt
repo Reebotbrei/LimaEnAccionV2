@@ -1,5 +1,7 @@
 package com.limaenaccion.feature_reports.presentation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -42,6 +44,15 @@ fun ReportDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
+
+    // Lanzador directo a la cámara real de Android (sin pantallas intermedias)
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            viewModel.onPhotoCaptured(bitmap)
+        }
+    }
 
     LaunchedEffect(uiState.published) {
         if (uiState.published) onPublished()
@@ -311,7 +322,7 @@ fun ReportDetailsScreen(
                 }
             } else {
                 OutlinedButton(
-                    onClick = onTakePhoto,
+                    onClick = { cameraLauncher.launch(null) },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {

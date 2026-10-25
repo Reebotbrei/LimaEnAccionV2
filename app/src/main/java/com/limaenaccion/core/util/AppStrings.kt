@@ -182,7 +182,40 @@ data class Strings(
     val reportRemovePhotoBtn: String,
     val reportQuickPublishBtn: String,
     val reportDraftNotice: String,
-    val reportGuidanceUnusual: String
+    val reportGuidanceUnusual: String,
+
+    // Pantalla Iniciar Sesión (Login)
+    val loginSubtitle: String,
+    val loginEmailLabel: String,
+    val loginPasswordLabel: String,
+    val loginForgotPasswordBtn: String,
+    val loginSubmitBtn: String,
+    val loginNoAccountPrompt: String,
+    val loginRegisterLink: String,
+
+    // Pantalla Registro de Usuario (Register)
+    val registerScreenTitle: String,
+    val registerIntroNotice: String,
+    val registerSectionPersonal: String,
+    val registerFullNameLabel: String,
+    val registerFullNamePlaceholder: String,
+    val registerDniLabel: String,
+    val registerGenderLabel: String,
+    val registerGenderMale: String,
+    val registerGenderFemale: String,
+    val registerSectionAccess: String,
+    val registerPhoneLabel: String,
+    val registerPasswordHelp: String,
+    val registerSectionResidence: String,
+    val registerDistrictPlaceholder: String,
+    val registerNeighborhoodPlaceholder: String,
+    val registerSubmitBtn: String,
+    val registerAlreadyHaveAccount: String,
+    val registerLoginLink: String,
+
+    // Verificación SMS
+    val smsWrongNumberBtn: String,
+    val smsCancelRegistrationBtn: String
 )
 
 val StringsSpanish = Strings(
@@ -349,7 +382,37 @@ val StringsSpanish = Strings(
     reportRemovePhotoBtn = "Quitar foto",
     reportQuickPublishBtn = "Publicar Reporte Ahora",
     reportDraftNotice = "Borrador guardado automáticamente",
-    reportGuidanceUnusual = "Reporta conductas u hechos observables (ej. forcejeo de cerraduras, merodeo en propiedad privada). No te bases en apariencia o vestimenta."
+    reportGuidanceUnusual = "Reporta conductas u hechos observables (ej. forcejeo de cerraduras, merodeo en propiedad privada). No te bases en apariencia o vestimenta.",
+
+    loginSubtitle = "Inicia sesión para continuar",
+    loginEmailLabel = "Correo electrónico",
+    loginPasswordLabel = "Contraseña",
+    loginForgotPasswordBtn = "¿Olvidaste tu contraseña?",
+    loginSubmitBtn = "Iniciar sesión",
+    loginNoAccountPrompt = "¿No tienes una cuenta? ",
+    loginRegisterLink = "Regístrate",
+
+    registerScreenTitle = "Crear cuenta",
+    registerIntroNotice = "Regístrate para proteger a tu comunidad y recibir alertas vecinales en tiempo real.",
+    registerSectionPersonal = "DATOS PERSONALES",
+    registerFullNameLabel = "Nombre completo *",
+    registerFullNamePlaceholder = "Ej. María Quispe Rojas",
+    registerDniLabel = "DNI (8 dígitos) *",
+    registerGenderLabel = "Género *",
+    registerGenderMale = "Masculino",
+    registerGenderFemale = "Femenino",
+    registerSectionAccess = "ACCESO Y CONTACTO",
+    registerPhoneLabel = "Celular (9 dígitos) *",
+    registerPasswordHelp = "Mínimo 8 caracteres",
+    registerSectionResidence = "ZONA DE RESIDENCIA",
+    registerDistrictPlaceholder = "Selecciona tu distrito *",
+    registerNeighborhoodPlaceholder = "Selecciona tu urbanización o barrio *",
+    registerSubmitBtn = "Registrarme y verificar SMS",
+    registerAlreadyHaveAccount = "¿Ya tienes una cuenta? ",
+    registerLoginLink = "Inicia sesión",
+
+    smsWrongNumberBtn = "¿Número incorrecto? Corregir número",
+    smsCancelRegistrationBtn = "Cancelar y volver al inicio"
 )
 
 val StringsEnglish = Strings(
@@ -516,7 +579,37 @@ val StringsEnglish = Strings(
     reportRemovePhotoBtn = "Remove photo",
     reportQuickPublishBtn = "Publish Report Now",
     reportDraftNotice = "Draft saved automatically",
-    reportGuidanceUnusual = "Report objective observable actions (e.g. tampering with locks, prowling on private property). Do not base reports on clothing or appearance."
+    reportGuidanceUnusual = "Report objective observable actions (e.g. tampering with locks, prowling on private property). Do not base reports on clothing or appearance.",
+
+    loginSubtitle = "Log in to continue",
+    loginEmailLabel = "Email address",
+    loginPasswordLabel = "Password",
+    loginForgotPasswordBtn = "Forgot your password?",
+    loginSubmitBtn = "Log in",
+    loginNoAccountPrompt = "Don't have an account? ",
+    loginRegisterLink = "Sign up",
+
+    registerScreenTitle = "Create account",
+    registerIntroNotice = "Sign up to protect your community and receive neighborhood alerts in real time.",
+    registerSectionPersonal = "PERSONAL INFORMATION",
+    registerFullNameLabel = "Full name *",
+    registerFullNamePlaceholder = "e.g. Maria Quispe Rojas",
+    registerDniLabel = "ID (8 digits) *",
+    registerGenderLabel = "Gender *",
+    registerGenderMale = "Male",
+    registerGenderFemale = "Female",
+    registerSectionAccess = "CONTACT & ACCESS",
+    registerPhoneLabel = "Cell phone (9 digits) *",
+    registerPasswordHelp = "Minimum 8 characters",
+    registerSectionResidence = "RESIDENCE ZONE",
+    registerDistrictPlaceholder = "Select your district *",
+    registerNeighborhoodPlaceholder = "Select your neighborhood *",
+    registerSubmitBtn = "Sign up & verify via SMS",
+    registerAlreadyHaveAccount = "Already have an account? ",
+    registerLoginLink = "Log in",
+
+    smsWrongNumberBtn = "Wrong number? Edit number",
+    smsCancelRegistrationBtn = "Cancel and return to login"
 )
 
 fun getAppStrings(language: String): Strings {

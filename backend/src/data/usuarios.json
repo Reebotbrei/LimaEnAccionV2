@@ -1,0 +1,38 @@
+[
+  {
+    "id": "usr_1792907044109",
+    "dni": "74881167",
+    "nombreCompleto": "Breider David",
+    "genero": "Masculino",
+    "correo": "catashungabreider@gmail.com",
+    "telefono": "915375393",
+    "contrasena": "abc1234567$",
+    "distrito": "San Juan de Lurigancho",
+    "urbanizacion": "Caja de Agua",
+    "creadoEn": "2026-10-25T05:44:04.109Z"
+  },
+  {
+    "id": "usr_1792906498029",
+    "dni": "74881162",
+    "nombreCompleto": "Anthony",
+    "genero": "Anthony",
+    "correo": "antony@gmail.com",
+    "telefono": "987654321",
+    "contrasena": "abc1234567$",
+    "distrito": "Comas",
+    "urbanizacion": "Canto Grande",
+    "creadoEn": "2026-10-25T05:34:58.029Z"
+  },
+  {
+    "id": "usr_demo_01",
+    "dni": "74881168",
+    "nombreCompleto": "Breider David Catashunga Peña",
+    "genero": "Masculino",
+    "correo": "vecino.lima@gmail.com",
+    "telefono": "987654321",
+    "contrasena": "password123",
+    "distrito": "San Juan de Lurigancho",
+    "urbanizacion": "Zárate",
+    "creadoEn": "2026-10-25T00:00:00.000Z"
+  }
+]

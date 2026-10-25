@@ -1,6 +1,9 @@
 package com.limaenaccion.core.data.network
 
+import com.limaenaccion.core.data.network.model.AuthResponse
 import com.limaenaccion.core.data.network.model.CreateReportRequest
+import com.limaenaccion.core.data.network.model.LoginRequest
+import com.limaenaccion.core.data.network.model.RegisterRequest
 import com.limaenaccion.core.data.network.model.ReportListResponse
 import com.limaenaccion.core.data.network.model.ReportResponse
 import retrofit2.Call
@@ -15,6 +18,14 @@ interface ApiService {
 
     @GET("/api/test")
     fun testConnectionCall(): Call<ApiResponse>
+
+    // Requerimiento (c): Registro de usuario consumiendo API Service (Node.js)
+    @POST("/api/v1/auth/register")
+    suspend fun registerUser(@Body request: RegisterRequest): AuthResponse
+
+    // Requerimiento (c): Inicio de sesión consumiendo API Service (Node.js)
+    @POST("/api/v1/auth/login")
+    suspend fun loginUser(@Body request: LoginRequest): AuthResponse
 
     // US-03 / API-01: Crear reporte en el backend
     @POST("/api/v1/reportes")
