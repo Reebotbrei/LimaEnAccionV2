@@ -196,10 +196,57 @@ function listarUsuarios(req, res) {
     }
 }
 
+/**
+ * POST /api/v1/auth/update
+ */
+async function actualizar(req, res) {
+    try {
+        const body = req.body || {};
+        const correo = body.email || body.correo;
+        if (!correo) {
+            return res.status(400).json({ status: "error", message: "Correo es requerido" });
+        }
+        const datos = {};
+        if (body.fullName || body.nombreCompleto) {
+            datos.nombreCompleto = body.fullName || body.nombreCompleto;
+            datos.fullName = datos.nombreCompleto;
+        }
+        if (body.phoneNumber || body.telefono) {
+            datos.telefono = body.phoneNumber || body.telefono;
+            datos.phoneNumber = datos.telefono;
+        }
+        if (body.gender || body.genero) {
+            datos.genero = body.gender || body.genero;
+            datos.gender = datos.genero;
+        }
+        if (body.district || body.distrito) {
+            datos.distrito = body.district || body.distrito;
+            datos.district = datos.distrito;
+        }
+        if (body.neighborhood || body.urbanizacion) {
+            datos.urbanizacion = body.neighborhood || body.urbanizacion;
+            datos.neighborhood = datos.urbanizacion;
+        }
+        const usuarioActualizado = usuariosStore.actualizarUsuario(correo, datos);
+        if (!usuarioActualizado) {
+            return res.status(404).json({ status: "error", message: "Usuario no encontrado" });
+        }
+        return res.status(200).json({
+            status: "success",
+            message: "Perfil actualizado correctamente",
+            data: sanitizarUsuario(usuarioActualizado)
+        });
+    } catch (e) {
+        return res.status(500).json({ status: "error", message: e.message });
+    }
+}
+
 module.exports = {
     registrar,
     registrarUsuario: registrar,
     login,
     iniciarSesion: login,
-    listarUsuarios
+    listarUsuarios,
+    actualizar,
+    actualizarPerfil: actualizar
 };

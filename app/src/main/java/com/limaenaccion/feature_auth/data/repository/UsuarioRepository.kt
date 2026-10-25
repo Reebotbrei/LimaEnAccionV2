@@ -18,4 +18,7 @@ interface UsuarioRepository {
 
     // 5. Verifica credenciales contra Firestore (fallback cuando el backend está caído o sin red)
     suspend fun loginConFirestore(email: String, password: String): Result<Usuario?>
+
+    // 6. Actualiza los datos del usuario en Firestore (nube) y en Room (caché local)
+    suspend fun actualizarUsuario(usuario: Usuario): Result<Unit>
 }

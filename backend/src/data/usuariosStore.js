@@ -55,5 +55,20 @@ module.exports = {
         usuarios.unshift(nuevoUsuario);
         guardarUsuariosEnDisco(usuarios);
         return nuevoUsuario;
+    },
+
+    actualizarUsuario: (correo, datosActualizados) => {
+        if (!correo) return null;
+        const correoLimpio = String(correo).trim().toLowerCase();
+        const usuarios = leerUsuariosDesdeDisco();
+        const index = usuarios.findIndex(u => {
+            const email1 = (u.correo || '').trim().toLowerCase();
+            const email2 = (u.email || '').trim().toLowerCase();
+            return email1 === correoLimpio || email2 === correoLimpio;
+        });
+        if (index === -1) return null;
+        usuarios[index] = { ...usuarios[index], ...datosActualizados };
+        guardarUsuariosEnDisco(usuarios);
+        return usuarios[index];
     }
 };

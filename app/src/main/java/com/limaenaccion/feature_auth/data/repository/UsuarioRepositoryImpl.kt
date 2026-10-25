@@ -120,4 +120,39 @@ class UsuarioRepositoryImpl(
             usuario
         }
     }
+
+    override suspend fun actualizarUsuario(usuario: Usuario): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            try {
+                val colecciones = listOf(coleccionUsuarios, coleccionUsers)
+                val updates = mapOf(
+                    "fullName" to usuario.fullName,
+                    "nombreCompleto" to usuario.fullName,
+                    "phoneNumber" to usuario.phoneNumber,
+                    "telefono" to usuario.phoneNumber,
+                    "gender" to usuario.gender,
+                    "genero" to usuario.gender,
+                    "district" to usuario.district,
+                    "distrito" to usuario.district,
+                    "neighborhood" to usuario.neighborhood,
+                    "urbanizacion" to usuario.neighborhood
+                )
+
+                if (usuario.uid.isNotBlank()) {
+                    coleccionUsuarios.document(usuario.uid).update(updates).await()
+                } else {
+                    for (col in colecciones) {
+                        val query = col.whereEqualTo("email", usuario.email.trim().lowercase()).get().await()
+                        for (doc in query.documents) {
+                            doc.reference.update(updates).await()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("UPDATE_FIREBASE", "No se pudo actualizar en Firestore remoto (${e.message})")
+            }
+            usuarioDao.guardarUsuario(usuario)
+            Unit
+        }
+    }
 }
