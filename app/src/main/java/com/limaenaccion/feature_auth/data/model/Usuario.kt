@@ -16,5 +16,7 @@ data class Usuario(
     val neighborhood: String = "",
     val address: String = "",
     val profilePhotoUrl: String = "",
+    val contrasena: String = "",
+    val password: String = contrasena,
     val createdAt: Long = System.currentTimeMillis()
 )

@@ -97,7 +97,7 @@ async function registrar(req, res) {
         };
 
         const guardado = usuariosStore.guardarNuevo(nuevoUsuario);
-        console.log(`[BACKEND AUTH] ✅ Nuevo vecino registrado con Bcrypt: ${guardado.correo} (${guardado.nombreCompleto} - DNI ${guardado.dni})`);
+        console.log(`[BACKEND AUTH] Nuevo vecino registrado con Bcrypt: ${guardado.correo} (${guardado.nombreCompleto} - DNI ${guardado.dni})`);
 
         return res.status(201).json({
             status: "success",
@@ -161,7 +161,7 @@ async function login(req, res) {
             });
         }
 
-        console.log(`[BACKEND AUTH] ✅ Inicio de sesión exitoso: ${usuario.correo || usuario.email} (${usuario.nombreCompleto || usuario.fullName})`);
+        console.log(`[BACKEND AUTH] Inicio de sesión exitoso: ${usuario.correo || usuario.email} (${usuario.nombreCompleto || usuario.fullName})`);
 
         return res.status(200).json({
             status: "success",
@@ -251,6 +251,35 @@ async function actualizar(req, res) {
     }
 }
 
+/**
+ * POST /api/v1/auth/delete
+ */
+async function eliminarCuenta(req, res) {
+    try {
+        const body = req.body || {};
+        const correo = (body.email || body.correo || '').trim().toLowerCase();
+        const dni = String(body.dni || '').trim();
+        const clave = correo || dni;
+
+        if (!clave) {
+            return res.status(400).json({ status: "error", message: "Correo o DNI es requerido" });
+        }
+
+        const eliminado = usuariosStore.eliminarUsuario(clave);
+        if (!eliminado) {
+            return res.status(404).json({ status: "error", message: "Usuario no encontrado" });
+        }
+
+        console.log(`[BACKEND AUTH] 🗑️ Cuenta eliminada exitosamente: ${clave}`);
+        return res.status(200).json({
+            status: "success",
+            message: "Cuenta eliminada permanentemente (Ley N° 29733)"
+        });
+    } catch (e) {
+        return res.status(500).json({ status: "error", message: e.message });
+    }
+}
+
 module.exports = {
     registrar,
     registrarUsuario: registrar,
@@ -258,5 +287,6 @@ module.exports = {
     iniciarSesion: login,
     listarUsuarios,
     actualizar,
-    actualizarPerfil: actualizar
+    actualizarPerfil: actualizar,
+    eliminarCuenta
 };

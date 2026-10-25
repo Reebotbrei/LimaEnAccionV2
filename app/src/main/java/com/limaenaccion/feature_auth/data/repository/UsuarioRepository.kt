@@ -21,4 +21,7 @@ interface UsuarioRepository {
 
     // 6. Actualiza los datos del usuario en Firestore (nube) y en Room (caché local)
     suspend fun actualizarUsuario(usuario: Usuario): Result<Unit>
+
+    // 7. Elimina la cuenta del usuario en Firestore (nube) y en Room (caché local)
+    suspend fun eliminarCuenta(email: String, dni: String): Result<Unit>
 }

@@ -82,6 +82,15 @@ class SqliteDatabaseHelper(context: Context) :
         )
     }
 
+    fun eliminarUsuario(correo: String): Int {
+        val db = writableDatabase
+        return db.delete(
+            TABLE_USUARIOS,
+            "LOWER($COL_CORREO) = LOWER(?)",
+            arrayOf(correo.trim())
+        )
+    }
+
     fun obtenerPorCorreo(correo: String): UsuarioEntity? {
         val db = readableDatabase
         val cursor = db.query(

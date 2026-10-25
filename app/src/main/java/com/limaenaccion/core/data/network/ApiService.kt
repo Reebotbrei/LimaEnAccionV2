@@ -43,6 +43,11 @@ interface ApiService {
     @POST("/api/v1/auth/update")
     suspend fun updateProfile(@Body request: RegisterRequest): AuthResponse
 
+    // Eliminar cuenta permanentemente (Ley N° 29733)
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @POST("/api/v1/auth/delete")
+    suspend fun deleteAccount(@Body request: RegisterRequest): AuthResponse
+
     // US-03 / API-01: Crear reporte en el backend
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
     @POST("/api/v1/reportes")

@@ -1,15 +1,22 @@
 package com.limaenaccion.feature_settings.presentation
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.data.local.AppDatabase
+import com.limaenaccion.core.data.local.SqliteDatabaseHelper
 import com.limaenaccion.core.data.local.dao.ContactoDao
 import com.limaenaccion.core.data.local.dao.ReporteDao
+import com.limaenaccion.core.data.local.dao.UsuarioDao
+import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.network.model.RegisterRequest
 import com.limaenaccion.core.data.preferences.model.DoNotDisturbPrefs
 import com.limaenaccion.core.data.preferences.PreferencesRepository
 import com.limaenaccion.core.data.preferences.PreferencesRepositoryImpl
 import com.limaenaccion.core.data.session.SessionManager
+import com.limaenaccion.feature_auth.data.repository.UsuarioRepository
+import com.limaenaccion.feature_auth.data.repository.UsuarioRepositoryImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,7 +68,10 @@ class SettingsViewModel @JvmOverloads constructor(
     application: Application,
     private val preferencesRepository: PreferencesRepository = PreferencesRepositoryImpl(application),
     private val contactoDao: ContactoDao = AppDatabase.getInstance(application).contactoDao(),
-    private val reporteDao: ReporteDao = AppDatabase.getInstance(application).reporteDao()
+    private val reporteDao: ReporteDao = AppDatabase.getInstance(application).reporteDao(),
+    private val usuarioDao: UsuarioDao = AppDatabase.getInstance(application).usuarioDao(),
+    private val sqliteHelper: SqliteDatabaseHelper = SqliteDatabaseHelper.getInstance(application),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(usuarioDao = usuarioDao)
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -188,12 +198,21 @@ class SettingsViewModel @JvmOverloads constructor(
     fun onConfirmClearCache() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // 1. Limpiar tabla Room de caché de usuario
+                usuarioDao.limpiarSesion()
+                // 2. Limpiar reportes temporales en Room
                 reporteDao.eliminarTodos()
+                // 3. Limpiar directorio de caché del sistema Android
                 getApplication<Application>().cacheDir.deleteRecursively()
+                getApplication<Application>().externalCacheDir?.deleteRecursively()
+                getApplication<Application>().codeCacheDir.deleteRecursively()
+
+                Log.d("SETTINGS", "✅ Caché purgada completamente (usuario_cache, reportes y disco)")
+
                 withContext(Dispatchers.Main) {
                     _uiState.value = _uiState.value.copy(
                         showClearCacheDialog = false,
-                        cacheClearedMessage = "Caché de mapas y reportes temporales liberada correctamente."
+                        cacheClearedMessage = "Caché de Room (usuario_cache), reportes y disco liberada correctamente."
                     )
                 }
             } catch (e: Exception) {
@@ -244,11 +263,54 @@ class SettingsViewModel @JvmOverloads constructor(
 
     fun onConfirmDeleteAccount(onAccountDeleted: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Purgar todos los datos locales y preferencias cumpliendo Ley N° 29733
+            val currentUser = SessionManager.currentUser.value
+            val email = currentUser?.correo.orEmpty()
+            val dni = currentUser?.dni.orEmpty()
+
+            Log.d("SETTINGS", "🗑️ Iniciando eliminación total de cuenta para: $email (DNI: $dni)")
+
+            // 1. Eliminar en API Service Node.js (REST)
+            try {
+                RetrofitClient.instance.deleteAccount(
+                    RegisterRequest(
+                        email = email,
+                        correo = email,
+                        dni = dni
+                    )
+                )
+                Log.d("SETTINGS", "✅ Cuenta eliminada de Node.js API Service")
+            } catch (e: Exception) {
+                Log.w("SETTINGS", "Aviso API Service delete: ${e.message}")
+            }
+
+            // 2. Eliminar en Firebase Firestore (Nube de Google)
+            try {
+                usuarioRepository.eliminarCuenta(email, dni)
+                Log.d("SETTINGS", "✅ Cuenta eliminada de Firebase Firestore")
+            } catch (e: Exception) {
+                Log.w("SETTINGS", "Aviso Firebase delete: ${e.message}")
+            }
+
+            // 3. Eliminar en SQLite local (Room + SQLiteOpenHelper)
+            try {
+                if (email.isNotBlank()) {
+                    usuarioDao.eliminarPorCorreo(email)
+                    sqliteHelper.eliminarUsuario(email)
+                }
+                usuarioDao.limpiarSesion()
+                reporteDao.eliminarTodos()
+                contactoDao.eliminarTodos()
+                Log.d("SETTINGS", "✅ Cuenta y datos eliminados de SQLite local")
+            } catch (e: Exception) {
+                Log.e("SETTINGS", "Error al eliminar en SQLite: ${e.message}")
+            }
+
+            // 4. Purgar preferencias, sesión activa y caché del teléfono
+            preferencesRepository.clearSession()
             preferencesRepository.clearAllPreferences()
-            reporteDao.eliminarTodos()
-            contactoDao.eliminarTodos()
+            SessionManager.clearSession()
             getApplication<Application>().cacheDir.deleteRecursively()
+            getApplication<Application>().externalCacheDir?.deleteRecursively()
 
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(showDeleteAccountDialog = false)

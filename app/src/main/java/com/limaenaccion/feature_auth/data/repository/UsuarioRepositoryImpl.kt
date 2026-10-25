@@ -105,19 +105,27 @@ class UsuarioRepositoryImpl(
 
             if (passDoc != null) {
                 if (passDoc == password) {
-                    Log.d("LOGIN_FIREBASE", "Contraseña coincide con Firestore")
+                    Log.d("LOGIN_FIREBASE", "✅ Contraseña coincide con Firestore")
                     usuarioDao.guardarUsuario(usuario)
                     return@runCatching usuario
                 } else {
-                    Log.w("LOGIN_FIREBASE", "Contraseña no coincide en Firestore")
+                    Log.w("LOGIN_FIREBASE", "❌ Contraseña no coincide en Firestore")
                     return@runCatching null
                 }
             }
 
-            // Si no tiene campo de contraseña en texto plano
-            Log.d("LOGIN_FIREBASE", "Usuario autenticado por existencia en Firestore")
-            usuarioDao.guardarUsuario(usuario)
-            usuario
+            // Si el documento en Firestore no tiene contraseña guardada,
+            // verificar si en SQLite local coincide la contraseña para este correo
+            val localUser = usuarioDao.autenticarLocal(emailLimpio, password)
+            if (localUser != null) {
+                Log.d("LOGIN_FIREBASE", "✅ Contraseña validada contra SQLite local")
+                usuarioDao.guardarUsuario(usuario)
+                return@runCatching usuario
+            }
+
+            // Si no hay contraseña verificable ni en Firestore ni en SQLite, rechazar el ingreso
+            Log.w("LOGIN_FIREBASE", "❌ No se pudo validar contraseña para '$emailLimpio'. Login rechazado.")
+            null
         }
     }
 
@@ -187,6 +195,44 @@ class UsuarioRepositoryImpl(
                 Log.e("UPDATE_FIREBASE", "Error al actualizar en Firestore: ${e.message}", e)
             }
             usuarioDao.guardarUsuario(usuario)
+            Unit
+        }
+    }
+
+    override suspend fun eliminarCuenta(email: String, dni: String): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val emailLimpio = email.trim().lowercase()
+            val dniLimpio = dni.trim()
+            val colecciones = listOf(coleccionUsuarios, coleccionUsers)
+
+            try {
+                for (col in colecciones) {
+                    if (emailLimpio.isNotBlank()) {
+                        val qEmail = col.whereEqualTo("email", emailLimpio).get().await()
+                        for (doc in qEmail.documents) {
+                            doc.reference.delete().await()
+                            Log.d("DELETE_FIREBASE", "🗑️ Doc ${doc.id} eliminado de ${col.id} por email")
+                        }
+                        val qCorreo = col.whereEqualTo("correo", emailLimpio).get().await()
+                        for (doc in qCorreo.documents) {
+                            doc.reference.delete().await()
+                            Log.d("DELETE_FIREBASE", "🗑️ Doc ${doc.id} eliminado de ${col.id} por correo")
+                        }
+                    }
+                    if (dniLimpio.isNotBlank()) {
+                        val qDni = col.whereEqualTo("dni", dniLimpio).get().await()
+                        for (doc in qDni.documents) {
+                            doc.reference.delete().await()
+                            Log.d("DELETE_FIREBASE", "🗑️ Doc ${doc.id} eliminado por DNI de ${col.id}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("DELETE_FIREBASE", "Error al eliminar en Firestore remoto (${e.message})")
+            }
+
+            usuarioDao.eliminarPorCorreo(emailLimpio)
+            usuarioDao.limpiarSesion()
             Unit
         }
     }

@@ -130,6 +130,7 @@ class LoginViewModel @JvmOverloads constructor(
 
         viewModelScope.launch {
             // ── 1. Intentar con el API Service de Node.js (Requerimiento c) ──
+            var servidorNodeRespondio = false
             try {
                 val response = RetrofitClient.instance.login(
                     LoginRequest(
@@ -137,6 +138,7 @@ class LoginViewModel @JvmOverloads constructor(
                         password = state.password
                     )
                 )
+                servidorNodeRespondio = true
                 if (response.status == "success" && response.data != null) {
                     val user = response.data
                     val entity = UsuarioEntity(
@@ -151,13 +153,33 @@ class LoginViewModel @JvmOverloads constructor(
                     )
                     SessionManager.setCurrentUser(entity)
                     persistirSesion(user.uid.ifBlank { user.id }, state.rememberSession)
-                    Log.i("LOGIN_FLOW", " Login exitoso consumiendo API Service (Node.js): ${entity.correo}")
+                    Log.i("LOGIN_FLOW", "✅ Login exitoso consumiendo API Service (Node.js): ${entity.correo}")
                     _uiState.value = _uiState.value.copy(isLoading = false, loginSuccess = true)
                     return@launch
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        passwordError = "Contraseña incorrecta"
+                    )
+                    return@launch
                 }
+            } catch (e: retrofit2.HttpException) {
+                // El servidor Node.js está activo y rechazó activamente las credenciales (HTTP 401, 400, etc.)
+                servidorNodeRespondio = true
+                Log.w("LOGIN_FLOW", "❌ API Service rechazó credenciales (HTTP ${e.code()})")
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    passwordError = if (e.code() == 401) "Contraseña incorrecta" else null,
+                    generalError = if (e.code() != 401) "Credenciales incorrectas" else null
+                )
+                return@launch
+            } catch (e: java.io.IOException) {
+                Log.w("LOGIN_FLOW", "⚠️ API Service Node.js no disponible (${e.message}). Intentando respaldos...")
             } catch (e: Exception) {
-                Log.w("LOGIN_FLOW", "⚠️ API Service Node.js offline (${e.message}). Intentando Firebase Cloud...")
+                Log.w("LOGIN_FLOW", "⚠️ Excepción en login (${e.message})")
             }
+
+            if (servidorNodeRespondio) return@launch
 
             // ── 2. Fallback a Firebase Cloud Firestore (Anthony) ──
             val resultFirestore = usuarioRepository.loginConFirestore(state.email.trim(), state.password)

@@ -71,5 +71,23 @@ module.exports = {
         usuarios[index] = { ...usuarios[index], ...datosActualizados };
         guardarUsuariosEnDisco(usuarios);
         return usuarios[index];
+    },
+
+    eliminarUsuario: (correoOrDni) => {
+        if (!correoOrDni) return false;
+        const clave = String(correoOrDni).trim().toLowerCase();
+        let usuarios = leerUsuariosDesdeDisco();
+        const initialLength = usuarios.length;
+        usuarios = usuarios.filter(u => {
+            const email1 = (u.correo || '').trim().toLowerCase();
+            const email2 = (u.email || '').trim().toLowerCase();
+            const dni = String(u.dni || '').trim().toLowerCase();
+            return !(email1 === clave || email2 === clave || dni === clave);
+        });
+        if (usuarios.length !== initialLength) {
+            guardarUsuariosEnDisco(usuarios);
+            return true;
+        }
+        return false;
     }
 };

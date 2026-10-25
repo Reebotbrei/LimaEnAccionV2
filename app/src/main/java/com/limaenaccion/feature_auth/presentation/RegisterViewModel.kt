@@ -182,6 +182,8 @@ class RegisterViewModel @JvmOverloads constructor(
                     phoneNumber = state.phoneNumber,
                     district = state.district.orEmpty(),
                     neighborhood = state.neighborhood.orEmpty(),
+                    contrasena = state.password,
+                    password = state.password,
                     createdAt = System.currentTimeMillis()
                 )
                 usuarioRepository.registrarUsuario(fbUser)
