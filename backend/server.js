@@ -16,7 +16,7 @@ function obtenerIpLocal() {
     return 'localhost';
 }
 
-app.listen(PORT, '0.0.0.0', async () => {
+const server = app.listen(PORT, '0.0.0.0', async () => {
     const ipLan = obtenerIpLocal();
     console.log(`=========================================================`);
     console.log(` 🚀 Servidor Lima en Acción corriendo en el puerto ${PORT}`);
@@ -36,5 +36,14 @@ app.listen(PORT, '0.0.0.0', async () => {
         console.log(`🔥 [FIREBASE SYNC] Sincronización completada: ${usuarios.length} cuentas activas en la nube.`);
     } catch (e) {
         console.warn(`⚠️ [FIREBASE SYNC] Error en sincronización inicial:`, e.message);
+    }
+});
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`\n❌ [ERROR] El puerto ${PORT} ya está ocupado por otra instancia.`);
+        console.error(`👉 Cierra cualquier otra terminal donde esté corriendo 'npm start' o ejecuta 'Stop-Process -Name node'.\n`);
+    } else {
+        console.error(`❌ [ERROR] Error en el servidor:`, err.message);
     }
 });
