@@ -15,14 +15,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.limaenaccion.R
+import com.limaenaccion.core.ui.components.AppLogo
+import com.limaenaccion.core.ui.components.BrandLayout
+import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
 
 @Composable
@@ -47,14 +48,13 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_shield_foreground),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(56.dp)
+            AppLogo(
+                variant = LogoVariant.FULL_BRAND,
+                layout = BrandLayout.ICON_TOP,
+                size = 76.dp,
+                useSquircleInFullBrand = true
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("LIMA EN ACCIÓN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 "Inicia sesión para continuar",
                 style = MaterialTheme.typography.bodyMedium,

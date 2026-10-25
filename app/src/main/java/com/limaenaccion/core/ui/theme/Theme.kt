@@ -5,7 +5,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+
+enum class AppThemeMode {
+    LIGHT,
+    DARK,
+    COLORBLIND
+}
+
+val LocalAppThemeMode = staticCompositionLocalOf { AppThemeMode.LIGHT }
 
 private val LightColors = lightColorScheme(
     primary = BrandGreen,
@@ -86,16 +96,23 @@ fun LimaEnAccionTheme(
     content: @Composable () -> Unit
 ) {
     val systemDark = isSystemInDarkTheme()
-    val colorScheme = when (theme.lowercase()) {
-        "oscuro" -> DarkColors
-        "claro" -> LightColors
-        "daltonico", "daltónico" -> ColorblindColors
-        else -> if (systemDark) DarkColors else LightColors
+    val themeMode = when (theme.lowercase()) {
+        "oscuro" -> AppThemeMode.DARK
+        "claro" -> AppThemeMode.LIGHT
+        "daltonico", "daltónico" -> AppThemeMode.COLORBLIND
+        else -> if (systemDark) AppThemeMode.DARK else AppThemeMode.LIGHT
+    }
+    val colorScheme = when (themeMode) {
+        AppThemeMode.DARK -> DarkColors
+        AppThemeMode.LIGHT -> LightColors
+        AppThemeMode.COLORBLIND -> ColorblindColors
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = getTypography(fontSizeSp),
-        content = content
-    )
+    CompositionLocalProvider(LocalAppThemeMode provides themeMode) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = getTypography(fontSizeSp),
+            content = content
+        )
+    }
 }

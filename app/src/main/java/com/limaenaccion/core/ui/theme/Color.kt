@@ -3,6 +3,8 @@ package com.limaenaccion.core.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val BrandGreen = Color(0xFF14532D)
+val BrandPinGreen = Color(0xFF15803D)
+val BrandForestDark = Color(0xFF0F2B1E)
 val BrandGreenLight = Color(0xFFEFF6EF)
 val EmergencyRed = Color(0xFFDC2626)
 val EmergencyRedLight = Color(0xFFFCE7E7)
@@ -16,3 +18,4 @@ val ColorblindPrimaryLight = Color(0xFFE5F1F9)
 val ColorblindWarning = Color(0xFFE69F00)
 val ColorblindDanger = Color(0xFFD55E00)
 val ColorblindDangerLight = Color(0xFFFBECE6)
+val ColorblindDeepNavy = Color(0xFF061E45)

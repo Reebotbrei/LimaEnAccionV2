@@ -5,8 +5,7 @@
 
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/brand_green</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_shield</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.LimaEnAccion</item>
     </style>
 </resources>
-

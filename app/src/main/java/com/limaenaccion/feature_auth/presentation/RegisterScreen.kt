@@ -29,7 +29,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.limaenaccion.core.ui.components.AppLogo
+import com.limaenaccion.core.ui.components.BrandLayout
 import com.limaenaccion.core.ui.components.DropdownField
+import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
 import com.limaenaccion.feature_auth.data.model.Gender
 
@@ -82,6 +85,14 @@ fun RegisterScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                AppLogo(
+                    variant = LogoVariant.FULL_BRAND,
+                    layout = BrandLayout.HORIZONTAL,
+                    size = 48.dp,
+                    useSquircleInFullBrand = true,
+                    titleFontSize = 22.sp
+                )
+
                 // Mensaje introductorio
                 Text(
                     text = "Regístrate para proteger a tu comunidad y recibir alertas vecinales en tiempo real.",
