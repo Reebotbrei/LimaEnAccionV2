@@ -3,13 +3,13 @@ const bcrypt = require('bcryptjs');
 // Hash de la API Key en la base de datos (clave original: "LIMA_EN_ACCION_API_KEY_2026")
 const API_KEY_HASH_BD = process.env.API_KEY_HASH || "$2b$10$KJBy5txsmtfuiehKpjOaZulvx/J0d23RoWZrHux./KWqYIXOMecpO";
 
-/**
- * Intercepta las peticiones y valida la API Key con bcrypt y verificación directa.
- * Permite endpoints públicos como GET /usuarios (para demostración al profesor en navegador) y OPTIONS (CORS preflight).
+/*
+ Intercepta las peticiones y valida la API Key con bcrypt y verificación directa.
+ Permite endpoints públicos como GET /usuarios (para demostración al profesor en navegador) y OPTIONS (CORS preflight).
  */
 async function validarApiKey(req, res, next) {
-    // Permitir preflight CORS y visualización pública de usuarios para revisión del profesor
-    if (req.method === 'OPTIONS' || (req.method === 'GET' && req.originalUrl.includes('/usuarios'))) {
+    // Permitir preflight CORS y visualización pública de usuarios y reportes para revisión en navegador
+    if (req.method === 'OPTIONS' || (req.method === 'GET' && (req.originalUrl.includes('/usuarios') || req.originalUrl.includes('/reportes') || req.originalUrl.includes('/api/test')))) {
         return next();
     }
 

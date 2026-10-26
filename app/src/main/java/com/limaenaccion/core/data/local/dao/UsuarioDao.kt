@@ -27,7 +27,7 @@ interface UsuarioDao {
     @Query("DELETE FROM usuarios WHERE LOWER(correo) = LOWER(:correo)")
     fun eliminarPorCorreo(correo: String): Int
 
-    // ── 2. Métodos para Usuario (Caché local de Firestore - Anthony) ──
+    // Métodos para Usuario
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun guardarUsuario(usuario: Usuario): Long
 

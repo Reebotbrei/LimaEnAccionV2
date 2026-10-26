@@ -107,4 +107,7 @@ class MockIncidentRepository : IncidentRepository {
     override suspend fun getIncidents(): List<Incident> = incidents
 
     override suspend fun getIncidentById(id: String): Incident? = incidents.find { it.id == id }
+
+    override fun observeIncidents(): kotlinx.coroutines.flow.Flow<List<Incident>> =
+        kotlinx.coroutines.flow.flowOf(incidents)
 }

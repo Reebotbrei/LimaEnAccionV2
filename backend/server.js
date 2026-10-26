@@ -1,6 +1,7 @@
 const os = require('os');
 const app = require('./src/app');
 const usuariosStore = require('./src/data/usuariosStore');
+const reportesStore = require('./src/data/reportesStore');
 
 const PORT = process.env.PORT || 3000;
 
@@ -33,7 +34,9 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
     try {
         console.log(`🔥 [FIREBASE SYNC] Iniciando sincronización con Firebase Cloud Firestore...`);
         const usuarios = await usuariosStore.sincronizarConFirestore();
-        console.log(`🔥 [FIREBASE SYNC] Sincronización completada: ${usuarios.length} cuentas activas en la nube.`);
+        console.log(`🔥 [FIREBASE SYNC] Usuarios sincronizados: ${usuarios.length} cuentas activas en la nube.`);
+        const reportes = await reportesStore.sincronizarConFirestore();
+        console.log(`🔥 [FIREBASE SYNC] Reportes sincronizados: ${reportes.length} reportes activos en la nube.`);
     } catch (e) {
         console.warn(`⚠️ [FIREBASE SYNC] Error en sincronización inicial:`, e.message);
     }

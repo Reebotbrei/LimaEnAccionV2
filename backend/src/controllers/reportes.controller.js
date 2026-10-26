@@ -1,9 +1,9 @@
 const reportesStore = require('../data/reportesStore');
 
-// GET /api/v1/reportes - Retorna la lista de reportes vigentes
-exports.listarReportes = (req, res) => {
+// GET /api/v1/reportes - Retorna la lista de reportes vigentes sincronizados con Firebase
+exports.listarReportes = async (req, res) => {
     try {
-        const reportes = reportesStore.obtenerTodos();
+        const reportes = await reportesStore.obtenerTodosAsync();
         res.json({
             status: "success",
             total: reportes.length,
@@ -17,8 +17,8 @@ exports.listarReportes = (req, res) => {
     }
 };
 
-// POST /api/v1/reportes - Registra y persiste un nuevo reporte en disco
-exports.crearReporte = (req, res) => {
+// POST /api/v1/reportes - Registra y persiste un nuevo reporte en Firestore y disco
+exports.crearReporte = async (req, res) => {
     try {
         const { tipo, titulo, descripcion, latitud, longitud, fotoUrl, esSos } = req.body;
 
@@ -46,16 +46,16 @@ exports.crearReporte = (req, res) => {
             latitud: typeof latitud === 'number' ? latitud : parseFloat(latitud) || -12.019542,
             longitud: typeof longitud === 'number' ? longitud : parseFloat(longitud) || -77.014231,
             fotoUrl: fotoUrl || null,
-            estado: "EN_REVISION",
+            estado: "REPORTADO",
             esSos: Boolean(esSos),
             creadoEn: ahora.toISOString(),
             venceEn: venceEn.toISOString()
         };
 
-        // Persistir en disco en reportes.json
-        const reporteGuardado = reportesStore.guardarNuevo(nuevoReporte);
+        // Persistir en Firestore y en disco (reportes.json)
+        const reporteGuardado = await reportesStore.guardarNuevo(nuevoReporte);
 
-        console.log(`[BACKEND] Nuevo reporte persistido en disco: ${reporteGuardado.id} - ${reporteGuardado.titulo}`);
+        console.log(`[BACKEND] ✅ Nuevo reporte persistido: ${reporteGuardado.id} - ${reporteGuardado.titulo}`);
 
         res.status(201).json({
             status: "success",

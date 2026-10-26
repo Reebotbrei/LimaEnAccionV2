@@ -28,7 +28,20 @@ class DashboardViewModel @JvmOverloads constructor(
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
-    init { loadIncidents() }
+    init {
+        loadIncidents()
+        observeRealtimeIncidents()
+    }
+
+    private fun observeRealtimeIncidents() {
+        viewModelScope.launch {
+            repository.observeIncidents().collect { incidentList ->
+                _uiState.value = _uiState.value.copy(
+                    incidentsState = UiState.Success(incidentList)
+                )
+            }
+        }
+    }
 
     fun loadIncidents() {
         viewModelScope.launch {
