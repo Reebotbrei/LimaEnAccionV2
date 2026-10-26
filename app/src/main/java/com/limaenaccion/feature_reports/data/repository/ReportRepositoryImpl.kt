@@ -36,7 +36,7 @@ class ReportRepositoryImpl(
         val venceEn = ahora + doceHorasMs
         val reporteIdFinal = "rep_$ahora"
 
-        val currentUser = SessionManager.currentUser
+        val currentUser = SessionManager.currentUser.value
         val userEmail = currentUser?.correo ?: "vecino.lima@gmail.com"
         val userName = currentUser?.nombreCompleto ?: "Vecino Vigilante"
 
