@@ -43,6 +43,16 @@ class AlertsListViewModel @JvmOverloads constructor(
 
     init {
         loadIncidents()
+        observeRealtimeIncidents()
+    }
+
+    private fun observeRealtimeIncidents() {
+        viewModelScope.launch {
+            repository.observeIncidents().collect { incidentList ->
+                cachedAllIncidents = incidentList
+                applyFiltersAndTab()
+            }
+        }
     }
 
     fun onTabSelected(tab: AlertFeedTab) {

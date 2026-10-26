@@ -24,7 +24,6 @@ class IncidentRepositoryImpl(
     application: Application,
     private val apiService: ApiService = RetrofitClient.instance,
     private val reporteDao: ReporteDao = AppDatabase.getInstance(application).reporteDao(),
-    private val mockRepository: IncidentRepository = MockIncidentRepository(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : IncidentRepository {
 
@@ -107,13 +106,11 @@ class IncidentRepositoryImpl(
     }
 
     override fun observeIncidents(): Flow<List<Incident>> = callbackFlow {
-        val baseMocks = mockRepository.getIncidents()
-
         // 1. Emisión inmediata desde SQLite Room (Offline-first)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val locales = reporteDao.obtenerListaTodos().map { entityToIncident(it) }
-                trySend(locales + baseMocks)
+                trySend(locales)
             } catch (e: Exception) {
                 Log.e("INCIDENT_REPO", "Error al leer caché inicial SQLite: ${e.message}")
             }
@@ -205,7 +202,7 @@ class IncidentRepositoryImpl(
                     }
 
                     Log.d("INCIDENT_REPO", "🔥 [TIEMPO REAL] Emitiendo ${realIncidents.size} reportes desde Firebase Firestore")
-                    trySend(realIncidents + baseMocks)
+                    trySend(realIncidents)
                 }
             }
 
@@ -215,8 +212,6 @@ class IncidentRepositoryImpl(
     }
 
     override suspend fun getIncidents(): List<Incident> = withContext(Dispatchers.IO) {
-        val baseMocks = mockRepository.getIncidents()
-
         // 1. Sincronizar desde Firebase Firestore
         try {
             val snapshot = firestore.collection("reportes")
@@ -293,7 +288,7 @@ class IncidentRepositoryImpl(
         }
 
         val realIncidents = reportesLocales.map { entityToIncident(it) }
-        realIncidents + baseMocks
+        realIncidents
     }
 
     override suspend fun getIncidentById(id: String): Incident? = withContext(Dispatchers.IO) {
@@ -344,7 +339,6 @@ class IncidentRepositoryImpl(
             Log.w("INCIDENT_REPO", "No se encontró en Firestore: ${e.message}")
         }
 
-        // 3. Fallback a Mocks
-        mockRepository.getIncidentById(id)
+        null
     }
 }
