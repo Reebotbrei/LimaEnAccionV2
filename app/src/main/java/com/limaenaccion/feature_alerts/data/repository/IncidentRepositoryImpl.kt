@@ -101,7 +101,9 @@ class IncidentRepositoryImpl(
             incidentStatus = parseIncidentStatus(entity.estado),
             witnessCount = 1,
             commentsCount = 0,
-            isVerifiedByAuthority = false
+            isVerifiedByAuthority = false,
+            latitude = entity.latitud,
+            longitude = entity.longitud
         )
     }
 
@@ -182,7 +184,9 @@ class IncidentRepositoryImpl(
                                 incidentStatus = parseIncidentStatus(estado),
                                 witnessCount = witnessCount,
                                 commentsCount = 0,
-                                isVerifiedByAuthority = false
+                                isVerifiedByAuthority = false,
+                                latitude = latitud,
+                                longitude = longitud
                             )
                             realIncidents.add(incident)
                         } catch (e: Exception) {
@@ -332,7 +336,9 @@ class IncidentRepositoryImpl(
                     incidentStatus = parseIncidentStatus(estado),
                     witnessCount = doc.getLong("witnessCount")?.toInt() ?: 1,
                     commentsCount = 0,
-                    isVerifiedByAuthority = false
+                    isVerifiedByAuthority = false,
+                    latitude = latitud,
+                    longitude = longitud
                 )
             }
         } catch (e: Exception) {

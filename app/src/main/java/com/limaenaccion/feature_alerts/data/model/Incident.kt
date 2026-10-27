@@ -36,5 +36,7 @@ data class Incident(
     val hasWitnessed: Boolean = false,
     val commentsCount: Int = 4,
     val isVerifiedByAuthority: Boolean = false,
-    val isReportedAsFalse: Boolean = false
+    val isReportedAsFalse: Boolean = false,
+    val latitude: Double = -12.019542,
+    val longitude: Double = -77.014231
 )

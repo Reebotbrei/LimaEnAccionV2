@@ -1,7 +1,5 @@
 package com.limaenaccion.feature_map.presentation
 
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
@@ -19,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +31,7 @@ import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.presentation.IncidentCard
 import com.limaenaccion.feature_alerts.presentation.color
 import com.limaenaccion.feature_alerts.presentation.icon
+import com.limaenaccion.feature_map.presentation.components.RealOsmMap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,25 +46,60 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text("San Juan de Lurigancho", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(strings.myNeighborhood, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                "San Juan de Lurigancho",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                strings.myNeighborhood,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Button(
+                                onClick = onReportClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(strings.reportBtn, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(onClick = { /* Notificaciones */ }) {
+                                Icon(Icons.Filled.Notifications, contentDescription = "Alertas", tint = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AssistChip(onClick = onReportClick, label = { Text(strings.reportBtn) })
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(Icons.Filled.Notifications, contentDescription = "Alertas")
-                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    ViewModeToggle(
+                        selected = uiState.viewMode,
+                        mapLabel = strings.viewMap,
+                        listLabel = strings.viewList,
+                        onSelectedChange = viewModel::onViewModeChange
+                    )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                ViewModeToggle(
-                    selected = uiState.viewMode,
-                    mapLabel = strings.viewMap,
-                    listLabel = strings.viewList,
-                    onSelectedChange = viewModel::onViewModeChange
-                )
             }
         },
         bottomBar = {
@@ -97,7 +131,7 @@ fun DashboardScreen(
                 }
                 is UiState.Success -> {
                     if (uiState.viewMode == DashboardViewMode.MAP) {
-                        SimulatedMap(incidents = state.data, onPinClick = viewModel::onPinClick)
+                        RealOsmMap(incidents = state.data, onPinClick = viewModel::onPinClick)
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -150,46 +184,6 @@ private fun ToggleChip(text: String, icon: ImageVector, selected: Boolean, onCli
             Icon(icon, contentDescription = null, tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text(text, color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun SimulatedMap(incidents: List<Incident>, onPinClick: (String) -> Unit) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color(0xFFE5E7EB))) {
-        val width = constraints.maxWidth.toFloat()
-        val height = constraints.maxHeight.toFloat()
-
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val roadColor = Color.White
-            drawLine(color = roadColor, start = Offset(0f, height * 0.4f), end = Offset(width, height * 0.4f), strokeWidth = 14f)
-            drawLine(color = roadColor, start = Offset(0f, height * 0.7f), end = Offset(width, height * 0.7f), strokeWidth = 10f)
-            drawLine(color = roadColor, start = Offset(width * 0.35f, 0f), end = Offset(width * 0.35f, height), strokeWidth = 14f)
-            drawLine(color = roadColor, start = Offset(width * 0.75f, 0f), end = Offset(width * 0.75f, height), strokeWidth = 10f)
-        }
-
-        Box(
-            modifier = Modifier
-                .offset((width * 0.5f / 2.75f).dp, (height * 0.5f / 2.75f).dp)
-                .size(16.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF2563EB))
-        )
-
-        incidents.forEach { incident ->
-            val pinX = (width * incident.mapX / 2.75f).dp
-            val pinY = (height * incident.mapY / 2.75f).dp
-            Box(
-                modifier = Modifier
-                    .offset(pinX, pinY)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(incident.type.color())
-                    .clickable { onPinClick(incident.id) },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = incident.type.icon(), contentDescription = incident.type.label, tint = Color.White, modifier = Modifier.size(20.dp))
-            }
         }
     }
 }
