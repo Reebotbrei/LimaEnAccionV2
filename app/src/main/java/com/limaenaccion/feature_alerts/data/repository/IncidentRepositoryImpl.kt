@@ -108,10 +108,11 @@ class IncidentRepositoryImpl(
     }
 
     override fun observeIncidents(): Flow<List<Incident>> = callbackFlow {
-        // 1. Emisión inmediata desde SQLite Room (Offline-first)
+        // 1. Emisión inmediata desde SQLite Room (Offline-first de reportes vigentes)
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val locales = reporteDao.obtenerListaTodos().map { entityToIncident(it) }
+                val ahora = System.currentTimeMillis()
+                val locales = reporteDao.obtenerListaVigentes(ahora).map { entityToIncident(it) }
                 trySend(locales)
             } catch (e: Exception) {
                 Log.e("INCIDENT_REPO", "Error al leer caché inicial SQLite: ${e.message}")
@@ -284,9 +285,9 @@ class IncidentRepositoryImpl(
             }
         }
 
-        // 2. Leer de SQLite Room local
+        // 2. Leer de SQLite Room local (solo vigentes)
         val reportesLocales = try {
-            reporteDao.obtenerListaTodos()
+            reporteDao.obtenerListaVigentes(System.currentTimeMillis())
         } catch (e: Exception) {
             emptyList()
         }

@@ -14,11 +14,20 @@ interface ReporteDao {
     @Query("SELECT * FROM reporte_cache WHERE venceEn > :ahora ORDER BY creadoEn DESC")
     fun observarVigentes(ahora: Long): Flow<List<ReporteEntity>>
 
+    @Query("SELECT * FROM reporte_cache WHERE venceEn > :ahora ORDER BY creadoEn DESC")
+    fun obtenerListaVigentes(ahora: Long): List<ReporteEntity>
+
     @Query("SELECT * FROM reporte_cache ORDER BY creadoEn DESC")
     fun observarTodos(): Flow<List<ReporteEntity>>
 
     @Query("SELECT * FROM reporte_cache ORDER BY creadoEn DESC")
     fun obtenerListaTodos(): List<ReporteEntity>
+
+    @Query("SELECT * FROM reporte_cache WHERE usuarioId = :usuarioId ORDER BY creadoEn DESC")
+    fun observarPorUsuario(usuarioId: String): Flow<List<ReporteEntity>>
+
+    @Query("SELECT * FROM reporte_cache WHERE usuarioId = :usuarioId ORDER BY creadoEn DESC")
+    fun obtenerListaPorUsuario(usuarioId: String): List<ReporteEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertar(reporte: ReporteEntity): Long

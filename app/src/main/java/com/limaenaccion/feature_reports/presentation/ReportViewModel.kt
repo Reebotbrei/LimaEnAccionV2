@@ -1,7 +1,15 @@
 package com.limaenaccion.feature_reports.presentation
 
+import android.Manifest
 import android.app.Application
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationManager
+import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.util.ImageCompressor
@@ -9,15 +17,18 @@ import com.limaenaccion.feature_reports.data.model.ReportTimeframe
 import com.limaenaccion.feature_reports.data.model.ReportType
 import com.limaenaccion.feature_reports.data.repository.ReportRepository
 import com.limaenaccion.feature_reports.data.repository.ReportRepositoryImpl
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 data class ReportUiState(
     val selectedType: ReportType? = null,
     val timeframe: ReportTimeframe = ReportTimeframe.AHORA,
-    val location: String = "Av. Próceres de la Independencia 133, SJL",
+    val location: String = "Detectando ubicación GPS...",
     val isCustomLocation: Boolean = false,
     val description: String = "",
     val isAnonymous: Boolean = false,
@@ -29,10 +40,13 @@ data class ReportUiState(
     val isPublishing: Boolean = false,
     val published: Boolean = false,
     val errorMessage: String? = null,
-    val hasDraftSaved: Boolean = false
+    val hasDraftSaved: Boolean = false,
+    val latitude: Double = -12.019542,
+    val longitude: Double = -77.014231,
+    val isGpsActive: Boolean = false
 ) {
     val canPublish: Boolean get() = selectedType != null && location.isNotBlank()
-    val isDescriptionValid: Boolean get() = true // En reporte rápido, la descripción y foto son opcionales
+    val isDescriptionValid: Boolean get() = true
 }
 
 class ReportViewModel @JvmOverloads constructor(
@@ -42,6 +56,84 @@ class ReportViewModel @JvmOverloads constructor(
 
     private val _uiState = MutableStateFlow(ReportUiState())
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
+
+    init {
+        fetchDeviceGpsLocation()
+    }
+
+    fun fetchDeviceGpsLocation() {
+        val app = getApplication<Application>()
+        val hasFine = ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFine || hasCoarse) {
+            try {
+                val lm = app.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                val lastGps = lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                val lastNet = lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                val best: Location? = when {
+                    lastGps != null && lastNet != null -> if (lastGps.time >= lastNet.time) lastGps else lastNet
+                    lastGps != null -> lastGps
+                    else -> lastNet
+                }
+
+                if (best != null) {
+                    val lat = best.latitude
+                    val lng = best.longitude
+                    _uiState.value = _uiState.value.copy(
+                        latitude = lat,
+                        longitude = lng,
+                        isGpsActive = true
+                    )
+
+                    // Intentar obtener dirección legible por Geocoder en segundo plano
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            val geocoder = Geocoder(app, Locale.getDefault())
+                            val addresses = geocoder.getFromLocation(lat, lng, 1)
+                            if (!addresses.isNullOrEmpty()) {
+                                val addr = addresses[0]
+                                val calle = addr.thoroughfare ?: addr.featureName ?: ""
+                                val distrito = addr.subLocality ?: addr.locality ?: "San Juan de Lurigancho"
+                                val direccionFinal = if (calle.isNotBlank()) "$calle, $distrito" else distrito
+
+                                withContext(Dispatchers.Main) {
+                                    if (!_uiState.value.isCustomLocation) {
+                                        _uiState.value = _uiState.value.copy(location = direccionFinal)
+                                    }
+                                }
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    if (!_uiState.value.isCustomLocation) {
+                                        _uiState.value = _uiState.value.copy(
+                                            location = "Ubicación GPS (${String.format(Locale.US, "%.4f, %.4f", lat, lng)})"
+                                        )
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                if (!_uiState.value.isCustomLocation) {
+                                    _uiState.value = _uiState.value.copy(
+                                        location = "San Juan de Lurigancho, Lima (GPS)"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        location = "San Juan de Lurigancho, Lima"
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w("REPORT_VM", "Error al leer sensor GPS: ${e.message}")
+                _uiState.value = _uiState.value.copy(location = "San Juan de Lurigancho, Lima")
+            }
+        } else {
+            _uiState.value = _uiState.value.copy(location = "San Juan de Lurigancho, Lima")
+        }
+    }
 
     fun onTypeSelected(type: ReportType) {
         _uiState.value = _uiState.value.copy(selectedType = type, hasDraftSaved = true)
@@ -57,14 +149,34 @@ class ReportViewModel @JvmOverloads constructor(
             isCustomLocation = true,
             hasDraftSaved = true
         )
+
+        // Si el usuario escribe una ubicación personalizada (ej. "UPN SJL"), intentar geocodificarla
+        if (newLocation.length >= 3) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val app = getApplication<Application>()
+                    val geocoder = Geocoder(app, Locale.getDefault())
+                    val query = "$newLocation, San Juan de Lurigancho, Lima, Perú"
+                    val results = geocoder.getFromLocationName(query, 1)
+                    if (!results.isNullOrEmpty()) {
+                        val match = results[0]
+                        withContext(Dispatchers.Main) {
+                            _uiState.value = _uiState.value.copy(
+                                latitude = match.latitude,
+                                longitude = match.longitude
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Silencioso: mantiene las coordenadas actuales de GPS
+                }
+            }
+        }
     }
 
     fun onResetLocationToGps() {
-        _uiState.value = _uiState.value.copy(
-            location = "Av. Próceres de la Independencia 133, SJL (GPS actual)",
-            isCustomLocation = false,
-            hasDraftSaved = true
-        )
+        _uiState.value = _uiState.value.copy(isCustomLocation = false, hasDraftSaved = true)
+        fetchDeviceGpsLocation()
     }
 
     fun onToggleAnonymous() {
@@ -122,6 +234,7 @@ class ReportViewModel @JvmOverloads constructor(
 
     fun resetReport() {
         _uiState.value = ReportUiState()
+        fetchDeviceGpsLocation()
     }
 
     fun onPublishClicked() {
@@ -143,15 +256,12 @@ class ReportViewModel @JvmOverloads constructor(
                 "Alerta de ${type.label} reportada en ${state.location}. Ocurrencia: ${state.timeframe.label}."
             }
 
-            val latitud = -12.019542
-            val longitud = -77.014231
-
             val result = reportRepository.publishReport(
                 type = type,
                 title = title,
                 description = finalDescription,
-                latitude = latitud,
-                longitude = longitud,
+                latitude = state.latitude,
+                longitude = state.longitude,
                 photoBase64 = state.photoBase64
             )
 

@@ -62,6 +62,7 @@ fun RealOsmMap(
     // Coordenada actual del usuario (comienza con la ubicación por defecto de SJL)
     var userLocation by remember { mutableStateOf(GeoPoint(defaultLatitude, defaultLongitude)) }
     var hasExactGps by remember { mutableStateOf(false) }
+    var hasCenteredOnUser by remember { mutableStateOf(false) }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
     var userMarkerRef by remember { mutableStateOf<Marker?>(null) }
 
@@ -99,6 +100,11 @@ fun RealOsmMap(
                 userLocation = newPoint
                 hasExactGps = true
                 userMarkerRef?.position = newPoint
+                if (!hasCenteredOnUser && mapViewRef != null) {
+                    hasCenteredOnUser = true
+                    mapViewRef?.controller?.animateTo(newPoint)
+                    mapViewRef?.controller?.setZoom(16.5)
+                }
                 mapViewRef?.invalidate()
             }
 
@@ -109,6 +115,11 @@ fun RealOsmMap(
                     userLocation = pt
                     hasExactGps = true
                     userMarkerRef?.position = pt
+                    if (!hasCenteredOnUser && mapViewRef != null) {
+                        hasCenteredOnUser = true
+                        mapViewRef?.controller?.animateTo(pt)
+                        mapViewRef?.controller?.setZoom(16.5)
+                    }
                     mapViewRef?.invalidate()
                 }
                 @Deprecated("Deprecated in Java")
