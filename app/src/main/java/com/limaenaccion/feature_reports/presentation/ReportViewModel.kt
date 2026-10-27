@@ -262,7 +262,8 @@ class ReportViewModel @JvmOverloads constructor(
                 description = finalDescription,
                 latitude = state.latitude,
                 longitude = state.longitude,
-                photoBase64 = state.photoBase64
+                photoBase64 = state.photoBase64,
+                isAnonymous = state.isAnonymous
             )
 
             result.fold(

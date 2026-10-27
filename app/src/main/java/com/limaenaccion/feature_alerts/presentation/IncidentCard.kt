@@ -214,7 +214,27 @@ fun IncidentCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Fila 6: Respaldos comunitarios / Validación oficial
-                if (incident.isVerifiedByAuthority) {
+                if (incident.falseReportsCount >= 3 || isReportedAsFalse) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Bajo revisión · Reportado como posible hecho falso",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                } else if (incident.isVerifiedByAuthority) {
                     Surface(
                         color = Color(0xFFEFF6FF),
                         shape = RoundedCornerShape(8.dp),
@@ -283,7 +303,7 @@ fun IncidentCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (hasWitnessed) "Presenciado ($effectiveWitnesses)" else "Lo presencié ($effectiveWitnesses)",
+                                text = if (hasWitnessed) "Presenciado ($effectiveWitnesses)" else if (effectiveWitnesses > 0) "Lo presencié ($effectiveWitnesses)" else "Lo presencié",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (hasWitnessed) FontWeight.Bold else FontWeight.Medium,
                                 color = if (hasWitnessed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface

@@ -1,17 +1,19 @@
 package com.limaenaccion.feature_alerts.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +36,15 @@ fun AlertsListScreen(
     val witnessedIds by viewModel.witnessedIncidentIds.collectAsState()
     val falsehoodIds by viewModel.falsehoodReportedIds.collectAsState()
     val strings = LocalAppStrings.current
+
+    var reportingIncidentId by remember { mutableStateOf<String?>(null) }
+    var selectedReason by remember { mutableStateOf("Noticia falsa o no ocurrió") }
+    val reasons = listOf(
+        "Noticia falsa o no ocurrió",
+        "Es una broma o spam",
+        "Ya fue atendido o resuelto",
+        "Información errónea / confusa"
+    )
 
     Scaffold(
         topBar = {
@@ -210,12 +221,78 @@ fun AlertsListScreen(
                                 hasWitnessed = witnessedIds.contains(incident.id),
                                 onToggleWitness = { viewModel.onToggleWitness(incident.id) },
                                 isReportedAsFalse = falsehoodIds.contains(incident.id),
-                                onReportFalsehood = { viewModel.onReportFalsehood(incident.id) }
+                                onReportFalsehood = {
+                                    if (!falsehoodIds.contains(incident.id)) {
+                                        reportingIncidentId = incident.id
+                                    }
+                                }
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    if (reportingIncidentId != null) {
+        AlertDialog(
+            onDismissRequest = { reportingIncidentId = null },
+            icon = { Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = {
+                Text(
+                    "Reportar contenido dudoso o falso",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "Ayúdanos a proteger la comunidad vecinal. ¿Por qué consideras que esta alerta debe ser moderada?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    reasons.forEach { reason ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (reason == selectedReason),
+                                    onClick = { selectedReason = reason }
+                                )
+                                .padding(vertical = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = (reason == selectedReason),
+                                onClick = { selectedReason = reason }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(reason, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val id = reportingIncidentId
+                        if (id != null) {
+                            viewModel.onReportFalsehood(id, selectedReason)
+                        }
+                        reportingIncidentId = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Reportar falsedad", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { reportingIncidentId = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }

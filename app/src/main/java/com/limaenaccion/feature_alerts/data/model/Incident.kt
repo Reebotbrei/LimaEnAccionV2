@@ -32,11 +32,12 @@ data class Incident(
     val isOfficial: Boolean = false,
     val photoBase64: String? = null,
     val incidentStatus: IncidentStatus = IncidentStatus.REPORTADO,
-    val witnessCount: Int = 3,
+    val witnessCount: Int = 0,
     val hasWitnessed: Boolean = false,
-    val commentsCount: Int = 4,
+    val commentsCount: Int = 0,
     val isVerifiedByAuthority: Boolean = false,
     val isReportedAsFalse: Boolean = false,
+    val falseReportsCount: Int = 0,
     val latitude: Double = -12.019542,
     val longitude: Double = -77.014231
 )

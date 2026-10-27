@@ -2,12 +2,14 @@ package com.limaenaccion.feature_alerts.data.repository
 
 import android.app.Application
 import android.util.Log
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.limaenaccion.core.data.local.AppDatabase
 import com.limaenaccion.core.data.local.dao.ReporteDao
 import com.limaenaccion.core.data.local.entities.ReporteEntity
 import com.limaenaccion.core.data.network.ApiService
 import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.session.SessionManager
 import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.data.model.IncidentStatus
 import com.limaenaccion.feature_alerts.data.model.IncidentType
@@ -83,13 +85,18 @@ class IncidentRepositoryImpl(
     private fun entityToIncident(entity: ReporteEntity): Incident {
         val type = parseIncidentType(entity.tipo)
         val (mapX, mapY) = calcularPosicionMapa(entity.latitud, entity.longitud)
+        val currentUser = SessionManager.currentUser.value
+        val isMine = entity.usuarioId == currentUser?.correo
+        val authorName = if (isMine) (currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Breider Catashunga") else "Vecino Vigilante"
+        val handle = if (isMine) "@${authorName.lowercase().replace(" ", "_").take(15)}" else "@vecino_sjl"
+
         return Incident(
             id = entity.id,
             type = type,
             title = entity.titulo,
             description = if (!entity.descripcion.isNullOrBlank()) entity.descripcion else "Reporte de ${type.label} registrado en la zona.",
-            reportedBy = "Tú (Vecino)",
-            handle = "@vecino_sjl",
+            reportedBy = authorName,
+            handle = handle,
             isOfficial = false,
             location = "San Juan de Lurigancho, Lima",
             distanceMeters = calcularDistanciaMetros(entity.latitud, entity.longitud),
@@ -99,9 +106,11 @@ class IncidentRepositoryImpl(
             mapY = mapY,
             photoBase64 = entity.fotoUri,
             incidentStatus = parseIncidentStatus(entity.estado),
-            witnessCount = 1,
+            witnessCount = 0,
             commentsCount = 0,
             isVerifiedByAuthority = false,
+            isReportedAsFalse = false,
+            falseReportsCount = 0,
             latitude = entity.latitud,
             longitude = entity.longitud
         )
@@ -146,8 +155,26 @@ class IncidentRepositoryImpl(
                             val venceEn = doc.getLong("venceEn") ?: (creadoEn + 12 * 60 * 60 * 1000L)
                             val estado = doc.getString("estado") ?: "REPORTADO"
                             val esSos = doc.getBoolean("esSos") ?: false
-                            val usuarioNombre = doc.getString("usuarioNombre") ?: "Vecino SJL"
-                            val witnessCount = doc.getLong("witnessCount")?.toInt() ?: 1
+                            val esAnonimo = doc.getBoolean("esAnonimo") ?: false
+                            val rawNombre = doc.getString("usuarioNombre")
+                            val currentUser = SessionManager.currentUser.value
+                            val isMine = doc.getString("usuarioId") == currentUser?.correo
+                            val authorName = if (esAnonimo) {
+                                "Vecino Anónimo"
+                            } else if (!rawNombre.isNullOrBlank() && rawNombre != "Vecino Vigilante") {
+                                rawNombre
+                            } else if (isMine) {
+                                currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Breider Catashunga"
+                            } else {
+                                "Vecino Vigilante"
+                            }
+                            val handle = if (esAnonimo) {
+                                "@vecino_anonimo"
+                            } else {
+                                "@${authorName.lowercase().replace(" ", "_").replace(".", "").take(14)}"
+                            }
+                            val witnessCount = doc.getLong("witnessCount")?.toInt() ?: 0
+                            val falseReportsCount = doc.getLong("falseReportsCount")?.toInt() ?: 0
 
                             val entity = ReporteEntity(
                                 id = id,
@@ -172,8 +199,8 @@ class IncidentRepositoryImpl(
                                 type = type,
                                 title = titulo,
                                 description = if (descripcion.isNotBlank()) descripcion else "Reporte de ${type.label} registrado en la zona.",
-                                reportedBy = usuarioNombre,
-                                handle = "@vecino_lima",
+                                reportedBy = authorName,
+                                handle = handle,
                                 isOfficial = false,
                                 location = "San Juan de Lurigancho, Lima",
                                 distanceMeters = calcularDistanciaMetros(latitud, longitud),
@@ -186,6 +213,8 @@ class IncidentRepositoryImpl(
                                 witnessCount = witnessCount,
                                 commentsCount = 0,
                                 isVerifiedByAuthority = false,
+                                isReportedAsFalse = falseReportsCount >= 3,
+                                falseReportsCount = falseReportsCount,
                                 latitude = latitud,
                                 longitude = longitud
                             )
@@ -347,5 +376,40 @@ class IncidentRepositoryImpl(
         }
 
         null
+    }
+
+    override suspend fun toggleWitness(incidentId: String, hasWitnessed: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val delta = if (hasWitnessed) -1L else 1L
+            firestore.collection("reportes").document(incidentId)
+                .update("witnessCount", FieldValue.increment(delta))
+                .await()
+            Log.d("INCIDENT_REPO", "✅ Respaldo actualizado en Firestore para reporte $incidentId (delta: $delta)")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("INCIDENT_REPO", "Error actualizando respaldo en Firestore: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun reportFalsehood(incidentId: String, reason: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val reportRef = firestore.collection("reportes").document(incidentId)
+            reportRef.update("falseReportsCount", FieldValue.increment(1L)).await()
+
+            // Registrar motivo en subcolección para auditoría
+            val moderacionDoc = hashMapOf(
+                "motivo" to reason,
+                "reportadoEn" to System.currentTimeMillis(),
+                "usuarioCorreo" to (SessionManager.currentUser.value?.correo ?: "anonimo")
+            )
+            reportRef.collection("moderacion_falsedad").add(moderacionDoc).await()
+
+            Log.d("INCIDENT_REPO", "🚩 Reporte de falsedad registrado en Firestore: $incidentId ($reason)")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("INCIDENT_REPO", "Error reportando falsedad en Firestore: ${e.message}")
+            Result.failure(e)
+        }
     }
 }

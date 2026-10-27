@@ -110,4 +110,10 @@ class MockIncidentRepository : IncidentRepository {
 
     override fun observeIncidents(): kotlinx.coroutines.flow.Flow<List<Incident>> =
         kotlinx.coroutines.flow.flowOf(incidents)
+
+    override suspend fun toggleWitness(incidentId: String, hasWitnessed: Boolean): Result<Unit> =
+        Result.success(Unit)
+
+    override suspend fun reportFalsehood(incidentId: String, reason: String): Result<Unit> =
+        Result.success(Unit)
 }

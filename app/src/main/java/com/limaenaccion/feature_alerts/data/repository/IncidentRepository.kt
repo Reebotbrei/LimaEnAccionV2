@@ -7,4 +7,6 @@ interface IncidentRepository {
     suspend fun getIncidents(): List<Incident>
     suspend fun getIncidentById(id: String): Incident?
     fun observeIncidents(): Flow<List<Incident>>
+    suspend fun toggleWitness(incidentId: String, hasWitnessed: Boolean): Result<Unit>
+    suspend fun reportFalsehood(incidentId: String, reason: String): Result<Unit>
 }

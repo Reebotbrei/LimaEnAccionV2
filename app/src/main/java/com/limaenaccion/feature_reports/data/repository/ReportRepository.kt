@@ -9,6 +9,7 @@ interface ReportRepository {
         description: String,
         latitude: Double,
         longitude: Double,
-        photoBase64: String?
+        photoBase64: String?,
+        isAnonymous: Boolean = false
     ): Result<String>
 }

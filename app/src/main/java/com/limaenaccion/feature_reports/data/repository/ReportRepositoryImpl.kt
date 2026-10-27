@@ -28,7 +28,8 @@ class ReportRepositoryImpl(
         description: String,
         latitude: Double,
         longitude: Double,
-        photoBase64: String?
+        photoBase64: String?,
+        isAnonymous: Boolean
     ): Result<String> = withContext(Dispatchers.IO) {
         val tipoStr = type.name
         val ahora = System.currentTimeMillis()
@@ -38,7 +39,8 @@ class ReportRepositoryImpl(
 
         val currentUser = SessionManager.currentUser.value
         val userEmail = currentUser?.correo ?: "vecino.lima@gmail.com"
-        val userName = currentUser?.nombreCompleto ?: "Vecino Vigilante"
+        val realName = currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Breider Catashunga"
+        val userName = if (isAnonymous) "Vecino Anónimo" else realName
 
         // 1. Persistencia NoSQL en tiempo real en Firebase Cloud Firestore
         try {
@@ -46,6 +48,7 @@ class ReportRepositoryImpl(
                 "id" to reporteIdFinal,
                 "usuarioId" to userEmail,
                 "usuarioNombre" to userName,
+                "esAnonimo" to isAnonymous,
                 "tipo" to tipoStr,
                 "titulo" to title,
                 "descripcion" to description,
@@ -57,7 +60,8 @@ class ReportRepositoryImpl(
                 "venceEn" to venceEn,
                 "estado" to "REPORTADO",
                 "esSos" to false,
-                "witnessCount" to 1,
+                "witnessCount" to 0,
+                "falseReportsCount" to 0,
                 "commentsCount" to 0
             )
             firestore.collection("reportes").document(reporteIdFinal).set(reportDoc).await()

@@ -63,18 +63,27 @@ class AlertsListViewModel @JvmOverloads constructor(
 
     fun onToggleWitness(incidentId: String) {
         val current = _witnessedIncidentIds.value.toMutableSet()
-        if (current.contains(incidentId)) {
+        val alreadyWitnessed = current.contains(incidentId)
+        if (alreadyWitnessed) {
             current.remove(incidentId)
         } else {
             current.add(incidentId)
         }
         _witnessedIncidentIds.value = current
+
+        viewModelScope.launch {
+            repository.toggleWitness(incidentId, alreadyWitnessed)
+        }
     }
 
-    fun onReportFalsehood(incidentId: String) {
+    fun onReportFalsehood(incidentId: String, reason: String = "Noticia falsa o no ocurrió") {
         val current = _falsehoodReportedIds.value.toMutableSet()
         current.add(incidentId)
         _falsehoodReportedIds.value = current
+
+        viewModelScope.launch {
+            repository.reportFalsehood(incidentId, reason)
+        }
     }
 
     fun loadIncidents() {
