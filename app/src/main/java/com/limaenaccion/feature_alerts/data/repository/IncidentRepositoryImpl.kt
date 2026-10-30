@@ -87,7 +87,7 @@ class IncidentRepositoryImpl(
         val (mapX, mapY) = calcularPosicionMapa(entity.latitud, entity.longitud)
         val currentUser = SessionManager.currentUser.value
         val isMine = entity.usuarioId == currentUser?.correo
-        val authorName = if (isMine) (currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Breider Catashunga") else "Vecino Vigilante"
+        val authorName = if (isMine) (currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Vecino Ciudadano") else "Vecino Vigilante"
         val handle = if (isMine) "@${authorName.lowercase().replace(" ", "_").take(15)}" else "@vecino_sjl"
 
         return Incident(
@@ -164,7 +164,7 @@ class IncidentRepositoryImpl(
                             } else if (!rawNombre.isNullOrBlank() && rawNombre != "Vecino Vigilante") {
                                 rawNombre
                             } else if (isMine) {
-                                currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Breider Catashunga"
+                                currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Vecino Ciudadano"
                             } else {
                                 "Vecino Vigilante"
                             }

@@ -424,9 +424,11 @@ async function restablecerContrasena(req, res) {
         otpStore.consumirOtp(correo);
 
         // 3. Actualizar contraseña en almacenamiento local y en Firebase Cloud Firestore
+        const passwordHash = await bcrypt.hash(String(nuevaContrasena), 10);
         const actualizacion = {
             contrasena: nuevaContrasena,
-            password: nuevaContrasena
+            password: nuevaContrasena,
+            passwordHash: passwordHash
         };
         const usuarioActualizado = await usuariosStore.actualizarUsuario(correo, actualizacion);
 

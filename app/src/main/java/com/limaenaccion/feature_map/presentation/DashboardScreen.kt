@@ -31,6 +31,7 @@ import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.presentation.IncidentCard
 import com.limaenaccion.feature_alerts.presentation.color
 import com.limaenaccion.feature_alerts.presentation.icon
+import com.limaenaccion.core.data.session.SessionManager
 import com.limaenaccion.feature_map.presentation.components.RealOsmMap
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,6 +44,9 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
+    val currentUser by SessionManager.currentUser.collectAsState()
+    val districtText = currentUser?.distrito?.ifBlank { "Lima Metropolitana" } ?: "Lima Metropolitana"
+    val neighborhoodText = currentUser?.urbanizacion?.ifBlank { strings.myNeighborhood } ?: strings.myNeighborhood
 
     Scaffold(
         topBar = {
@@ -64,12 +68,12 @@ fun DashboardScreen(
                     ) {
                         Column {
                             Text(
-                                "San Juan de Lurigancho",
+                                districtText,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                strings.myNeighborhood,
+                                neighborhoodText,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface

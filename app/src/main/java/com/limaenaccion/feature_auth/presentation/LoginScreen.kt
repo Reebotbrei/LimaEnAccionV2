@@ -163,24 +163,6 @@ fun LoginScreen(
                         }
                     }
                 }
-            } else if (uiState.remainingAttempts in 1..4) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp)
-                ) {
-                    Text(
-                        text = "⚠️ Te quedan ${uiState.remainingAttempts} intento(s) antes del bloqueo de seguridad",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
             }
 
             Text(strings.loginEmailLabel, style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())

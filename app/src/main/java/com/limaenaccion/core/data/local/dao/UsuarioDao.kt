@@ -18,6 +18,9 @@ interface UsuarioDao {
     @Query("SELECT * FROM usuarios WHERE LOWER(correo) = LOWER(:correo) LIMIT 1")
     fun obtenerPorCorreo(correo: String): UsuarioEntity?
 
+    @Query("SELECT * FROM usuarios WHERE dni = :dni LIMIT 1")
+    fun obtenerPorDni(dni: String): UsuarioEntity?
+
     @Query("SELECT * FROM usuarios WHERE LOWER(correo) = LOWER(:correo) AND contrasena = :contrasena LIMIT 1")
     fun autenticarLocal(correo: String, contrasena: String): UsuarioEntity?
 
@@ -42,6 +45,12 @@ interface UsuarioDao {
 
     @Query("SELECT * FROM usuario_cache WHERE uid = :uid LIMIT 1")
     fun obtenerUsuario(uid: String): Usuario?
+
+    @Query("SELECT * FROM usuario_cache LIMIT 1")
+    fun obtenerPrimerUsuarioCache(): Usuario?
+
+    @Query("SELECT * FROM usuarios ORDER BY fechaRegistro DESC LIMIT 1")
+    fun obtenerUltimoUsuarioRegistrado(): UsuarioEntity?
 
     @Query("SELECT * FROM usuario_cache WHERE uid = :uid LIMIT 1")
     fun obtenerUsuarioFlow(uid: String): Flow<Usuario?>

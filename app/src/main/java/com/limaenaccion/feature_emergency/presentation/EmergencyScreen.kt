@@ -24,6 +24,8 @@ import com.limaenaccion.feature_emergency.data.model.EmergencyContactType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmergencyScreen(
+    showBottomBar: Boolean = true,
+    isSessionRemembered: Boolean = false,
     onNavigateToLogin: () -> Unit,
     onAddAuxiliaryContact: () -> Unit,
     viewModel: EmergencyViewModel = viewModel()
@@ -43,11 +45,13 @@ fun EmergencyScreen(
             )
         },
         bottomBar = {
-            PrimaryButton(
-                text = strings.loginBtn,
-                onClick = onNavigateToLogin,
-                modifier = Modifier.padding(16.dp)
-            )
+            if (showBottomBar) {
+                PrimaryButton(
+                    text = if (isSessionRemembered) "Continuar a mi Comunidad" else strings.loginBtn,
+                    onClick = onNavigateToLogin,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }
     ) { paddingValues ->
         when (val state = uiState) {

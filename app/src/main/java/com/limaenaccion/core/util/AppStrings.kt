@@ -314,7 +314,7 @@ val StringsSpanish = Strings(
     liveUpdatedNow = "San Juan de Lurigancho · Actualizado ahora",
 
     myNeighborhood = "Mi Vecindario",
-    reportBtn = "+ Reportar",
+    reportBtn = "Reportar",
     sosButton = "BOTÓN SOS",
     viewMap = "Mapa",
     viewList = "Lista",

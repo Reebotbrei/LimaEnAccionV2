@@ -87,9 +87,8 @@ function docToUsuario(doc) {
  * Convierte un objeto JavaScript a campos con tipos de Firestore REST API.
  * Estandariza a un único conjunto limpio en español para evitar campos duplicados en Firestore.
  */
-function usuarioToFirestoreFields(u) {
+function usuarioToFirestoreFields(u, esActualizacion = false) {
     const fields = {};
-    const uid = u.id || u.uid || `usr_${Date.now()}`;
     const dni = u.dni ? String(u.dni).trim() : '';
     const nombreCompleto = u.nombreCompleto || u.fullName || '';
     const correo = (u.correo || u.email || '').trim().toLowerCase();
@@ -100,7 +99,11 @@ function usuarioToFirestoreFields(u) {
     const contrasena = u.contrasena || u.password || '';
     const foto = u.fotoPerfil || u.profilePhotoUrl || '';
 
-    if (uid) fields.id = { stringValue: uid };
+    // Solo asignar id al crear nuevo documento; en updates no se incluye id para no sobreescribir ni duplicar
+    if (!esActualizacion) {
+        const uid = u.id || u.uid || `usr_${Date.now()}`;
+        if (uid) fields.id = { stringValue: uid };
+    }
     if (dni) fields.dni = { stringValue: dni };
     if (nombreCompleto) fields.nombreCompleto = { stringValue: nombreCompleto };
     if (correo) fields.correo = { stringValue: correo };
@@ -326,7 +329,7 @@ module.exports = {
         // 2. Sincronizar actualización con Firebase Firestore
         try {
             const docIds = await buscarDocIdsEnFirestore(clave);
-            const fields = usuarioToFirestoreFields(datosActualizados);
+            const fields = usuarioToFirestoreFields(datosActualizados, true);
             const fieldKeys = Object.keys(fields);
 
             if (docIds.length > 0 && fieldKeys.length > 0) {

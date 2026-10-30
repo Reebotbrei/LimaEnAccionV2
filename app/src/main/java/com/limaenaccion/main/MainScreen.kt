@@ -118,7 +118,7 @@ fun MainScreen(
                 AlertsListScreen(onIncidentClick = onNavigateToIncidentDetail)
             }
             composable("tab_directory") {
-                EmergencyScreen(onNavigateToLogin = { }, onAddAuxiliaryContact = onManageContacts)
+                EmergencyScreen(showBottomBar = false, onNavigateToLogin = { }, onAddAuxiliaryContact = onManageContacts)
             }
             composable("tab_profile") {
                 ProfileScreen(

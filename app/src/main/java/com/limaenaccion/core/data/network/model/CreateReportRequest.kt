@@ -7,5 +7,8 @@ data class CreateReportRequest(
     val latitud: Double,
     val longitud: Double,
     val fotoUrl: String? = null,
-    val esSos: Boolean = false
+    val esSos: Boolean = false,
+    val usuarioId: String? = null,
+    val usuarioNombre: String? = null,
+    val esAnonimo: Boolean = false
 )

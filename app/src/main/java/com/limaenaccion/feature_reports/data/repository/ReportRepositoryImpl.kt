@@ -38,9 +38,10 @@ class ReportRepositoryImpl(
         val reporteIdFinal = "rep_$ahora"
 
         val currentUser = SessionManager.currentUser.value
-        val userEmail = currentUser?.correo ?: "vecino.lima@gmail.com"
-        val realName = currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Breider Catashunga"
-        val userName = if (isAnonymous) "Vecino Anónimo" else realName
+        val isAnon = isAnonymous
+        val userEmail = if (isAnon) "anonimo@limaenaccion.pe" else (currentUser?.correo?.takeIf { it.isNotBlank() } ?: "vecino.lima@gmail.com")
+        val realName = currentUser?.nombreCompleto?.takeIf { it.isNotBlank() } ?: "Vecino Ciudadano"
+        val userName = if (isAnon) "Vecino Anónimo" else realName
 
         // 1. Persistencia NoSQL en tiempo real en Firebase Cloud Firestore
         try {
@@ -48,7 +49,7 @@ class ReportRepositoryImpl(
                 "id" to reporteIdFinal,
                 "usuarioId" to userEmail,
                 "usuarioNombre" to userName,
-                "esAnonimo" to isAnonymous,
+                "esAnonimo" to isAnon,
                 "tipo" to tipoStr,
                 "titulo" to title,
                 "descripcion" to description,
@@ -65,12 +66,12 @@ class ReportRepositoryImpl(
                 "commentsCount" to 0
             )
             firestore.collection("reportes").document(reporteIdFinal).set(reportDoc).await()
-            Log.d("LIMA_FIRESTORE", "✅ [FIREBASE FIRESTORE] Reporte transmitido en vivo: $reporteIdFinal ($title)")
+            Log.d("LIMA_FIRESTORE", "✅ [FIREBASE FIRESTORE] Reporte transmitido en vivo: $reporteIdFinal ($title) por $userEmail")
         } catch (e: Exception) {
             Log.w("LIMA_FIRESTORE", "⚠️ [FIREBASE FIRESTORE] Error al transmitir a Firestore (${e.message}). Continuando con respaldos...")
         }
 
-        // 2. Persistencia remota en el Backend (Node.js por Retrofit - Requerimiento de Rúbrica)
+        // 2. Persistencia remota en el Backend (Node.js por Retrofit)
         try {
             val request = CreateReportRequest(
                 tipo = tipoStr,
@@ -79,15 +80,18 @@ class ReportRepositoryImpl(
                 latitud = latitude,
                 longitud = longitude,
                 fotoUrl = photoBase64,
-                esSos = false
+                esSos = false,
+                usuarioId = userEmail,
+                usuarioNombre = userName,
+                esAnonimo = isAnon
             )
             apiService.createReport(request)
-            Log.d("LIMA_BACKEND", "✅ [BACKEND NODE.JS] Reporte persistido en API Service: $reporteIdFinal")
+            Log.d("LIMA_BACKEND", "✅ [BACKEND NODE.JS] Reporte persistido en API Service: $reporteIdFinal (Autor: $userEmail)")
         } catch (e: Exception) {
             Log.w("LIMA_BACKEND", "⚠️ [BACKEND NODE.JS] Servidor no respondió (${e.message}). Continuando con guardado local.")
         }
 
-        // 3. Persistencia local en SQLite con Room (US-06 Caducidad 12h - Requerimiento de Rúbrica)
+        // 3. Persistencia local en SQLite con Room (US-06 Caducidad 12h)
         try {
             val entity = ReporteEntity(
                 id = reporteIdFinal,
@@ -98,17 +102,17 @@ class ReportRepositoryImpl(
                 latitud = latitude,
                 longitud = longitude,
                 fotoUri = photoBase64,
+                esSos = false,
                 creadoEn = ahora,
                 venceEn = venceEn,
-                estado = "REPORTADO",
-                esSos = false
+                estado = "REPORTADO"
             )
             reporteDao.insertar(entity)
-            Log.d("LIMA_ROOM", "✅ [SQLITE ROOM] Reporte guardado en caché local: $reporteIdFinal")
-            Result.success(reporteIdFinal)
+            Log.d("LIMA_SQLITE", "✅ [SQLITE ROOM] Reporte guardado localmente (expira en 12h): $reporteIdFinal")
         } catch (e: Exception) {
-            Log.e("LIMA_ROOM", "❌ [SQLITE ROOM] Error al guardar en SQLite: ${e.message}")
-            Result.failure(e)
+            Log.e("LIMA_SQLITE", "❌ [SQLITE ROOM] Error al persistir reporte local: ${e.message}")
         }
+
+        Result.success(reporteIdFinal)
     }
 }

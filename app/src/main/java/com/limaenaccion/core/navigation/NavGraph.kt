@@ -62,8 +62,23 @@ fun NavGraph(
         }
 
         composable(Screen.Emergency.route) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val prefs = remember { com.limaenaccion.core.data.preferences.PreferencesRepositoryImpl(context) }
+            val rememberSession by prefs.rememberSession.collectAsState(initial = false)
+            val activeSessionUid by prefs.activeSessionUid.collectAsState(initial = "")
+            val isSessionRemembered = rememberSession && activeSessionUid.isNotBlank()
+
             EmergencyScreen(
-                onNavigateToLogin = { navController.navigate(Screen.Login.route) },
+                isSessionRemembered = isSessionRemembered,
+                onNavigateToLogin = {
+                    if (isSessionRemembered) {
+                        navController.navigate(Screen.Main.route) {
+                            popUpTo(Screen.Emergency.route) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Screen.Login.route)
+                    }
+                },
                 onAddAuxiliaryContact = { navController.navigate(Screen.AddAuxiliaryContact.route) }
             )
         }

@@ -305,8 +305,8 @@ class LoginViewModel @JvmOverloads constructor(
                 isLoading = false,
                 remainingAttempts = newRemaining,
                 isLockedOut = false,
-                passwordError = "$message. Quedan $newRemaining intento(s)",
-                generalError = "⚠️ Te quedan $newRemaining intentos de 5 antes del bloqueo de seguridad"
+                passwordError = null,
+                generalError = "$message (Te quedan $newRemaining intentos de 5)"
             )
         }
     }
