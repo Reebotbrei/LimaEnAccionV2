@@ -2,7 +2,7 @@ package com.limaenaccion.feature_auth.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -22,11 +22,17 @@ import com.limaenaccion.core.ui.components.PrimaryButton
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewPasswordScreen(
+    email: String = "",
+    code: String = "",
     onNavigateBack: () -> Unit,
     onPasswordSaved: () -> Unit,
     viewModel: NewPasswordViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(email, code) {
+        viewModel.initCredentials(email, code)
+    }
 
     LaunchedEffect(uiState.passwordSaved) {
         if (uiState.passwordSaved) onPasswordSaved()
@@ -38,7 +44,7 @@ fun NewPasswordScreen(
                 title = { Text("Nueva Contraseña") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -49,11 +55,31 @@ fun NewPasswordScreen(
             )
         },
         bottomBar = {
-            PrimaryButton(text = "Guardar", onClick = viewModel::onSaveClicked, modifier = Modifier.padding(16.dp))
+            PrimaryButton(
+                text = if (uiState.isSaving) "Guardando..." else "Guardar Contraseña",
+                onClick = viewModel::onSaveClicked,
+                enabled = !uiState.isSaving,
+                modifier = Modifier.padding(16.dp)
+            )
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp)) {
-            Text("Crea una contraseña segura", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp)
+        ) {
+            Text(
+                "Crea una contraseña segura",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Ingresa y confirma tu nueva clave de acceso para tu cuenta ($email).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(24.dp))
 
             Text("Nueva contraseña", style = MaterialTheme.typography.labelSmall)
@@ -61,7 +87,7 @@ fun NewPasswordScreen(
             OutlinedTextField(
                 value = uiState.newPassword,
                 onValueChange = viewModel::onNewPasswordChange,
-                placeholder = { Text("Mínimo 8 caracteres") },
+                placeholder = { Text("Mínimo 6 caracteres") },
                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = viewModel::onToggleNewPasswordVisibility) {
@@ -100,6 +126,15 @@ fun NewPasswordScreen(
                 supportingText = uiState.confirmPasswordError?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (uiState.generalError != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = uiState.generalError ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }

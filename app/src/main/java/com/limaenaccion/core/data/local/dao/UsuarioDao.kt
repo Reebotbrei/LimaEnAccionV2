@@ -24,6 +24,9 @@ interface UsuarioDao {
     @Query("SELECT * FROM usuarios ORDER BY fechaRegistro DESC")
     fun obtenerTodos(): List<UsuarioEntity>
 
+    @Query("UPDATE usuarios SET contrasena = :nuevaContrasena WHERE LOWER(correo) = LOWER(:correo)")
+    fun actualizarContrasena(correo: String, nuevaContrasena: String): Int
+
     @Query("DELETE FROM usuarios WHERE LOWER(correo) = LOWER(:correo)")
     fun eliminarPorCorreo(correo: String): Int
 

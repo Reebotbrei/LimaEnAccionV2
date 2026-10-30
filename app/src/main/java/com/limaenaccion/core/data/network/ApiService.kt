@@ -2,10 +2,14 @@ package com.limaenaccion.core.data.network
 
 import com.limaenaccion.core.data.network.model.AuthResponse
 import com.limaenaccion.core.data.network.model.CreateReportRequest
+import com.limaenaccion.core.data.network.model.ForgotPasswordRequest
+import com.limaenaccion.core.data.network.model.GenericApiResponse
 import com.limaenaccion.core.data.network.model.LoginRequest
 import com.limaenaccion.core.data.network.model.RegisterRequest
 import com.limaenaccion.core.data.network.model.ReportListResponse
 import com.limaenaccion.core.data.network.model.ReportResponse
+import com.limaenaccion.core.data.network.model.ResetPasswordRequest
+import com.limaenaccion.core.data.network.model.VerifyResetCodeRequest
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -47,6 +51,19 @@ interface ApiService {
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
     @POST("/api/v1/auth/delete")
     suspend fun deleteAccount(@Body request: RegisterRequest): AuthResponse
+
+    // Recuperación de contraseña vía SMTP real
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @POST("/api/v1/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): GenericApiResponse
+
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @POST("/api/v1/auth/verify-reset-code")
+    suspend fun verifyResetCode(@Body request: VerifyResetCodeRequest): GenericApiResponse
+
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @POST("/api/v1/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): GenericApiResponse
 
     // US-03 / API-01: Crear reporte en el backend
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")

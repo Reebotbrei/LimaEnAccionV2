@@ -79,12 +79,26 @@ fun NavGraph(
         composable(Screen.ForgotPassword.route) {
             ForgotPasswordScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onCodeVerified = { navController.navigate(Screen.NewPassword.route) }
+                onCodeVerified = { email, code ->
+                    navController.navigate(Screen.NewPassword.createRoute(email, code))
+                }
             )
         }
 
-        composable(Screen.NewPassword.route) {
+        composable(
+            route = Screen.NewPassword.route,
+            arguments = listOf(
+                navArgument("email") { type = NavType.StringType },
+                navArgument("code") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val rawEmail = backStackEntry.arguments?.getString("email") ?: ""
+            val email = try { java.net.URLDecoder.decode(rawEmail, "UTF-8") } catch (_: Exception) { rawEmail }
+            val code = backStackEntry.arguments?.getString("code") ?: ""
+
             NewPasswordScreen(
+                email = email,
+                code = code,
                 onNavigateBack = { navController.popBackStack() },
                 onPasswordSaved = { navController.popBackStack(Screen.Login.route, false) }
             )

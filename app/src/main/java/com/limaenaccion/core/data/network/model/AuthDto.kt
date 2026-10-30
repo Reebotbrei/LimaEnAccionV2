@@ -56,3 +56,29 @@ data class ApiErrorBody(
     val status: String? = null,
     val message: String? = null
 )
+
+data class ForgotPasswordRequest(
+    val email: String,
+    val correo: String = email
+)
+
+data class VerifyResetCodeRequest(
+    val email: String,
+    val code: String,
+    val correo: String = email,
+    val codigo: String = code
+)
+
+data class ResetPasswordRequest(
+    val email: String,
+    val code: String,
+    val newPassword: String,
+    val correo: String = email,
+    val codigo: String = code,
+    val nuevaContrasena: String = newPassword
+)
+
+data class GenericApiResponse(
+    val status: String = "success",
+    val message: String = ""
+)

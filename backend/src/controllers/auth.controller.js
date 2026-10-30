@@ -1,5 +1,7 @@
 const bcrypt = require('bcryptjs');
 const usuariosStore = require('../data/usuariosStore');
+const otpStore = require('../data/otpStore');
+const emailService = require('../services/emailService');
 
 function sanitizarUsuario(usuario) {
     const { contrasena, password, passwordHash, ...usuarioPublico } = usuario;
@@ -285,6 +287,154 @@ async function eliminarCuenta(req, res) {
     }
 }
 
+/**
+ * POST /api/v1/auth/forgot-password
+ * Valida la existencia del usuario y envía un correo con código OTP vía SMTP de Gmail.
+ */
+async function solicitarRecuperacion(req, res) {
+    try {
+        const body = req.body || {};
+        const correo = (body.email || body.correo || '').trim().toLowerCase();
+
+        if (!correo) {
+            return res.status(400).json({
+                status: "error",
+                message: "Por favor, ingresa tu correo electrónico registrado."
+            });
+        }
+
+        // 1. Verificar si el usuario existe en disco o en Firestore
+        let usuario = usuariosStore.obtenerPorCorreo(correo);
+        if (!usuario) {
+            usuario = await usuariosStore.obtenerPorCorreoAsync(correo);
+        }
+
+        if (!usuario) {
+            return res.status(404).json({
+                status: "error",
+                message: "No encontramos ninguna cuenta vecinal registrada con este correo electrónico."
+            });
+        }
+
+        // 2. Generar código OTP criptográfico de 6 dígitos con expiración de 10 min
+        const { codigo } = otpStore.guardarOtp(correo);
+        const nombre = usuario.nombreCompleto || usuario.fullName || 'Vecino';
+
+        // 3. Enviar correo real usando Nodemailer + Cuenta de Soporte
+        console.log(`[SMTP] 📧 Enviando código ${codigo} a ${correo}...`);
+        await emailService.enviarCodigoRecuperacion(correo, nombre, codigo);
+        console.log(`[SMTP] ✅ Correo de recuperación enviado con éxito a ${correo}`);
+
+        return res.status(200).json({
+            status: "success",
+            message: `Hemos enviado un código de seguridad de 6 dígitos a tu correo: ${correo}`,
+            data: { correo }
+        });
+    } catch (error) {
+        console.error('[SMTP] ❌ Error al enviar correo de recuperación:', error);
+        return res.status(500).json({
+            status: "error",
+            message: "No se pudo enviar el correo de recuperación. Por favor intenta nuevamente en unos momentos."
+        });
+    }
+}
+
+/**
+ * POST /api/v1/auth/verify-reset-code
+ * Valida si el código de 6 dígitos es correcto y no ha vencido.
+ */
+async function verificarCodigoRecuperacion(req, res) {
+    try {
+        const body = req.body || {};
+        const correo = (body.email || body.correo || '').trim().toLowerCase();
+        const codigo = (body.code || body.codigo || '').trim();
+
+        if (!correo || !codigo) {
+            return res.status(400).json({
+                status: "error",
+                message: "Correo y código de verificación son requeridos."
+            });
+        }
+
+        const validacion = otpStore.verificarOtp(correo, codigo);
+        if (!validacion.valido) {
+            return res.status(400).json({
+                status: "error",
+                message: validacion.mensaje
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: "Código verificado exitosamente."
+        });
+    } catch (error) {
+        return res.status(500).json({ status: "error", message: error.message });
+    }
+}
+
+/**
+ * POST /api/v1/auth/reset-password
+ * Valida el código y actualiza la contraseña en Firestore y en local.
+ */
+async function restablecerContrasena(req, res) {
+    try {
+        const body = req.body || {};
+        const correo = (body.email || body.correo || '').trim().toLowerCase();
+        const codigo = (body.code || body.codigo || '').trim();
+        const nuevaContrasena = (body.newPassword || body.nuevaContrasena || body.contrasena || '').trim();
+
+        if (!correo || !codigo || !nuevaContrasena) {
+            return res.status(400).json({
+                status: "error",
+                message: "Correo, código y nueva contraseña son obligatorios."
+            });
+        }
+
+        if (nuevaContrasena.length < 6) {
+            return res.status(400).json({
+                status: "error",
+                message: "La nueva contraseña debe tener al menos 6 caracteres."
+            });
+        }
+
+        // 1. Validar código OTP
+        const validacion = otpStore.verificarOtp(correo, codigo);
+        if (!validacion.valido) {
+            return res.status(400).json({
+                status: "error",
+                message: validacion.mensaje
+            });
+        }
+
+        // 2. Consumir código (un solo uso)
+        otpStore.consumirOtp(correo);
+
+        // 3. Actualizar contraseña en almacenamiento local y en Firebase Cloud Firestore
+        const actualizacion = {
+            contrasena: nuevaContrasena,
+            password: nuevaContrasena
+        };
+        const usuarioActualizado = await usuariosStore.actualizarUsuario(correo, actualizacion);
+
+        if (!usuarioActualizado) {
+            return res.status(404).json({
+                status: "error",
+                message: "No se pudo actualizar la contraseña. Usuario no encontrado."
+            });
+        }
+
+        console.log(`[BACKEND AUTH] 🔑 Contraseña restablecida con éxito para: ${correo}`);
+        return res.status(200).json({
+            status: "success",
+            message: "Tu contraseña ha sido restablecida con éxito. Ya puedes iniciar sesión con tu nueva clave."
+        });
+    } catch (error) {
+        console.error('[BACKEND AUTH] ❌ Error al restablecer contraseña:', error);
+        return res.status(500).json({ status: "error", message: error.message });
+    }
+}
+
 module.exports = {
     registrar,
     registrarUsuario: registrar,
@@ -293,5 +443,8 @@ module.exports = {
     listarUsuarios,
     actualizar,
     actualizarPerfil: actualizar,
-    eliminarCuenta
+    eliminarCuenta,
+    solicitarRecuperacion,
+    verificarCodigoRecuperacion,
+    restablecerContrasena
 };

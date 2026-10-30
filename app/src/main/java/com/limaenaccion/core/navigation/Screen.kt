@@ -5,7 +5,10 @@ sealed class Screen(val route: String) {
     object Emergency : Screen("emergency")
     object Login : Screen("login")
     object ForgotPassword : Screen("forgot_password")
-    object NewPassword : Screen("new_password")
+    object NewPassword : Screen("new_password/{email}/{code}") {
+        fun createRoute(email: String, code: String) =
+            "new_password/${java.net.URLEncoder.encode(email, "UTF-8")}/$code"
+    }
 
     object RegisterGraph : Screen("register_graph")
     object Register : Screen("register")

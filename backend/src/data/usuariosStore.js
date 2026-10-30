@@ -62,28 +62,32 @@ function docToUsuario(doc) {
 
 /**
  * Convierte un objeto JavaScript a campos con tipos de Firestore REST API.
+ * Estandariza a un único conjunto limpio en español para evitar campos duplicados en Firestore.
  */
 function usuarioToFirestoreFields(u) {
     const fields = {};
-    const textKeys = [
-        'uid', 'id', 'dni', 'fullName', 'nombreCompleto', 'email', 'correo',
-        'phoneNumber', 'telefono', 'district', 'distrito', 'neighborhood',
-        'urbanizacion', 'gender', 'genero', 'contrasena', 'password',
-        'passwordHash', 'profilePhotoUrl', 'address'
-    ];
+    const uid = u.id || u.uid || `usr_${Date.now()}`;
+    const dni = u.dni ? String(u.dni).trim() : '';
+    const nombreCompleto = u.nombreCompleto || u.fullName || '';
+    const correo = (u.correo || u.email || '').trim().toLowerCase();
+    const telefono = u.telefono || u.phoneNumber || '';
+    const distrito = u.distrito || u.district || '';
+    const urbanizacion = u.urbanizacion || u.neighborhood || '';
+    const genero = u.genero || u.gender || '';
+    const contrasena = u.contrasena || u.password || '';
 
-    for (const k of textKeys) {
-        if (u[k] !== undefined && u[k] !== null && String(u[k]).trim() !== '') {
-            fields[k] = { stringValue: String(u[k]) };
-        }
-    }
+    if (uid) fields.id = { stringValue: uid };
+    if (dni) fields.dni = { stringValue: dni };
+    if (nombreCompleto) fields.nombreCompleto = { stringValue: nombreCompleto };
+    if (correo) fields.correo = { stringValue: correo };
+    if (telefono) fields.telefono = { stringValue: telefono };
+    if (distrito) fields.distrito = { stringValue: distrito };
+    if (urbanizacion) fields.urbanizacion = { stringValue: urbanizacion };
+    if (genero) fields.genero = { stringValue: genero };
+    if (contrasena) fields.contrasena = { stringValue: contrasena };
 
-    if (u.createdAt) {
-        fields.createdAt = { integerValue: String(typeof u.createdAt === 'number' ? u.createdAt : Date.now()) };
-    }
-    if (u.creadoEn) {
-        fields.creadoEn = { stringValue: String(u.creadoEn) };
-    }
+    const fecha = u.creadoEn || (u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString());
+    fields.creadoEn = { stringValue: String(fecha) };
 
     return fields;
 }
