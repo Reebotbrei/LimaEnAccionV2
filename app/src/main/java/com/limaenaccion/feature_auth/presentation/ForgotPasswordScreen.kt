@@ -205,8 +205,7 @@ private fun ValidateCodeDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(56.dp)
-                                .focusRequester(focusRequesters[index]),
-                            contentPadding = PaddingValues(0.dp)
+                                .focusRequester(focusRequesters[index])
                         )
                     }
                 }
