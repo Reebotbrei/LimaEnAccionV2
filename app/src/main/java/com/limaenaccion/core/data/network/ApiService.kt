@@ -9,6 +9,8 @@ import com.limaenaccion.core.data.network.model.RegisterRequest
 import com.limaenaccion.core.data.network.model.ReportListResponse
 import com.limaenaccion.core.data.network.model.ReportResponse
 import com.limaenaccion.core.data.network.model.ResetPasswordRequest
+import com.limaenaccion.core.data.network.model.SendRegisterCodeRequest
+import com.limaenaccion.core.data.network.model.SendRegisterCodeResponse
 import com.limaenaccion.core.data.network.model.VerifyResetCodeRequest
 import retrofit2.Call
 import retrofit2.http.Body
@@ -23,6 +25,15 @@ interface ApiService {
 
     @GET("/api/test")
     fun testConnectionCall(): Call<ApiResponse>
+
+    // Pre-registro: Solicitud y validación de código OTP (1 minuto) por Gmail y Celular
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @POST("/api/v1/auth/send-register-code")
+    suspend fun sendRegisterCode(@Body request: SendRegisterCodeRequest): SendRegisterCodeResponse
+
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @POST("/api/v1/auth/verify-register-code")
+    suspend fun verifyRegisterCode(@Body request: VerifyResetCodeRequest): GenericApiResponse
 
     // Requerimiento (c): Registro de usuario consumiendo API Service (Node.js)
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")

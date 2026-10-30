@@ -9,15 +9,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-private const val RESEND_SECONDS = 45
+private const val RESEND_SECONDS = 60 // 1 minuto de validez
 
 data class SmsVerificationUiState(
     val codeDigits: List<String> = List(6) { "" },
     val codeError: String? = null,
     val secondsRemaining: Int = RESEND_SECONDS,
+    val isVerifying: Boolean = false,
     val verified: Boolean = false
 ) {
     val canResend: Boolean get() = secondsRemaining <= 0
+    val fullCode: String get() = codeDigits.joinToString("")
 }
 
 class SmsVerificationViewModel : ViewModel() {
@@ -31,7 +33,7 @@ class SmsVerificationViewModel : ViewModel() {
         startTimer()
     }
 
-    private fun startTimer() {
+    fun startTimer() {
         timerJob?.cancel()
         _uiState.value = _uiState.value.copy(secondsRemaining = RESEND_SECONDS)
         timerJob = viewModelScope.launch {
@@ -48,20 +50,21 @@ class SmsVerificationViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(codeDigits = updated, codeError = null)
     }
 
-    fun onResendClicked() {
-        if (_uiState.value.canResend) {
-            _uiState.value = _uiState.value.copy(codeDigits = List(6) { "" })
-            startTimer()
-        }
+    fun resetDigits() {
+        _uiState.value = _uiState.value.copy(codeDigits = List(6) { "" }, codeError = null)
+        startTimer()
     }
 
-    fun onVerifyClicked() {
-        val code = _uiState.value.codeDigits.joinToString("")
-        if (code.length < 6) {
-            _uiState.value = _uiState.value.copy(codeError = "Ingresa el código completo")
-            return
-        }
-        _uiState.value = _uiState.value.copy(verified = true)
+    fun setError(error: String?) {
+        _uiState.value = _uiState.value.copy(codeError = error, isVerifying = false)
+    }
+
+    fun setVerifying(verifying: Boolean) {
+        _uiState.value = _uiState.value.copy(isVerifying = verifying)
+    }
+
+    fun setVerified(verified: Boolean) {
+        _uiState.value = _uiState.value.copy(verified = verified, isVerifying = false)
     }
 
     override fun onCleared() {

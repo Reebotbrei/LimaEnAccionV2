@@ -137,8 +137,11 @@ fun NavGraph(
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Screen.RegisterGraph.route) }
                 val registerViewModel: RegisterViewModel = viewModel(parentEntry)
                 val registerState by registerViewModel.uiState.collectAsState()
+                val context = androidx.compose.ui.platform.LocalContext.current
                 SmsVerificationScreen(
                     phoneNumber = registerState.phoneNumber,
+                    email = registerState.email,
+                    simulatedSmsNotice = registerState.simulatedSmsNotice,
                     onNavigateBack = {
                         registerViewModel.onResetRegistrationFinished()
                         navController.popBackStack()
@@ -147,9 +150,20 @@ fun NavGraph(
                         registerViewModel.onResetRegistrationFinished()
                         navController.popBackStack(Screen.Login.route, false)
                     },
+                    onVerifyCode = { code, callback ->
+                        registerViewModel.verifyCodeAndRegister(code, callback)
+                    },
+                    onResendCode = { callback ->
+                        registerViewModel.resendRegistrationCode(callback)
+                    },
                     onVerified = {
-                        navController.navigate(Screen.LocationPermission.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
+                        android.widget.Toast.makeText(
+                            context,
+                            "¡Registro exitoso! Ya puedes iniciar sesión.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.RegisterGraph.route) { inclusive = true }
                         }
                     }
                 )

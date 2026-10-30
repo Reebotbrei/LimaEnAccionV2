@@ -1,10 +1,12 @@
 package com.limaenaccion.feature_auth.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -113,6 +116,72 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
+            // ── Bloqueo por 5 intentos fallidos ──
+            if (uiState.isLockedOut) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Credenciales Incorrectas.. recuperar Cuenta",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Superaste los 5 intentos de inicio de sesión. Por seguridad tu acceso ha sido suspendido temporalmente. Restablece tu contraseña mediante tu correo registrado.",
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = onForgotPasswordClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Recuperar Cuenta Ahora", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else if (uiState.remainingAttempts in 1..4) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+                    Text(
+                        text = "⚠️ Te quedan ${uiState.remainingAttempts} intento(s) antes del bloqueo de seguridad",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+
             Text(strings.loginEmailLabel, style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(4.dp))
             OutlinedTextField(
@@ -121,6 +190,7 @@ fun LoginScreen(
                 placeholder = { Text("vecino.lima@gmail.com") },
                 leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
                 singleLine = true,
+                enabled = !uiState.isLockedOut && !uiState.isLoading,
                 isError = uiState.emailError != null,
                 supportingText = uiState.emailError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -146,6 +216,7 @@ fun LoginScreen(
                 },
                 visualTransformation = if (uiState.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
+                enabled = !uiState.isLockedOut && !uiState.isLoading,
                 isError = uiState.passwordError != null,
                 supportingText = uiState.passwordError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -153,31 +224,14 @@ fun LoginScreen(
             )
 
             Spacer(modifier = Modifier.height(4.dp))
-            TextButton(onClick = onForgotPasswordClick, modifier = Modifier.align(Alignment.End)) {
+            TextButton(
+                onClick = onForgotPasswordClick,
+                modifier = Modifier.align(Alignment.End)
+            ) {
                 Text(strings.loginForgotPasswordBtn, color = MaterialTheme.colorScheme.primary)
             }
 
-            // ── Opción de Recordar Sesión ──
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { viewModel.onRememberSessionChange(!uiState.rememberSession) }
-                    .padding(vertical = 4.dp)
-            ) {
-                Checkbox(
-                    checked = uiState.rememberSession,
-                    onCheckedChange = viewModel::onRememberSessionChange
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (strings.loginEmailLabel == "Correo electrónico") "Recordar sesión" else "Remember session",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            if (uiState.generalError != null) {
+            if (uiState.generalError != null && !uiState.isLockedOut) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = uiState.generalError ?: "",
@@ -187,7 +241,7 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (uiState.isLoading) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -203,7 +257,7 @@ fun LoginScreen(
                 PrimaryButton(
                     text = strings.loginSubmitBtn,
                     onClick = viewModel::onLoginClicked,
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading && !uiState.isLockedOut
                 )
             }
 
@@ -218,6 +272,51 @@ fun LoginScreen(
                 )
             }
         }
+    }
+
+    // ── Diálogo flotante modal "¿Desea Recordar la sesión? SI / NO" ──
+    if (uiState.showRememberSessionDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onConfirmRememberSession(false) },
+            icon = {
+                Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "¿Desea Recordar la sesión?",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = "Al seleccionar 'SÍ', mantendrás tu cuenta iniciada en este dispositivo.\n\nAl seleccionar 'NO', si sales de la aplicación o presionas volver, tu sesión se cerrará automáticamente por seguridad.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.onConfirmRememberSession(true) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("SÍ", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { viewModel.onConfirmRememberSession(false) }
+                ) {
+                    Text("NO", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 
     // ── Diálogo modal flotante de desarrollador (sólo accesible mediante pulsación larga en el logo) ──

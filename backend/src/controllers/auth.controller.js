@@ -448,7 +448,115 @@ async function restablecerContrasena(req, res) {
     }
 }
 
+
+/**
+ * POST /api/v1/auth/send-register-code
+ * Valida unicidad y envia codigo OTP de 6 digitos (valido por 1 min) por Gmail
+ */
+async function solicitarCodigoRegistro(req, res) {
+    try {
+        const body = req.body || {};
+        const correo = (body.email || body.correo || '').trim().toLowerCase();
+        const dni = String(body.dni || '').trim();
+        const nombre = (body.fullName || body.nombreCompleto || 'Vecino').trim();
+        const telefono = (body.phoneNumber || body.telefono || '').trim();
+
+        if (!correo || !dni) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Correo electronico y DNI son obligatorios.'
+            });
+        }
+
+        let usuarioExistente = usuariosStore.obtenerPorCorreo(correo);
+        if (!usuarioExistente) {
+            usuarioExistente = await usuariosStore.obtenerPorCorreoAsync(correo);
+        }
+        if (usuarioExistente) {
+            return res.status(409).json({
+                status: 'error',
+                message: 'Este correo electronico ya esta registrado en Lima en Accion'
+            });
+        }
+
+        let dniExistente = usuariosStore.obtenerPorDni(dni);
+        if (!dniExistente) {
+            dniExistente = await usuariosStore.obtenerPorDniAsync(dni);
+        }
+        if (dniExistente) {
+            return res.status(409).json({
+                status: 'error',
+                message: 'Este DNI ya se encuentra vinculado a otra cuenta'
+            });
+        }
+
+        const { codigo } = otpStore.guardarOtp(correo, 60 * 1000);
+        console.log('[REGISTRO OTP] Generado codigo ' + codigo + ' para ' + correo + ' (' + nombre + ')');
+
+        try {
+            await emailService.enviarCodigoVerificacionRegistro(correo, nombre, codigo);
+            console.log('[REGISTRO OTP] Correo enviado exitosamente a ' + correo);
+        } catch (mailError) {
+            console.error('[REGISTRO OTP] Error al enviar correo:', mailError.message);
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Codigo de verificacion de 6 digitos enviado a ' + correo,
+            data: {
+                correo: correo,
+                telefono: telefono,
+                debugCode: codigo
+            }
+        });
+    } catch (e) {
+        console.error('[REGISTRO OTP] Error:', e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al generar codigo de verificacion: ' + e.message
+        });
+    }
+}
+
+/**
+ * POST /api/v1/auth/verify-register-code
+ */
+async function verificarCodigoRegistro(req, res) {
+    try {
+        const body = req.body || {};
+        const correo = (body.email || body.correo || '').trim().toLowerCase();
+        const codigo = (body.code || body.codigo || '').trim();
+
+        if (!correo || !codigo) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Correo y codigo son requeridos.'
+            });
+        }
+
+        const validacion = otpStore.verificarOtp(correo, codigo);
+        if (!validacion.valido) {
+            return res.status(400).json({
+                status: 'error',
+                message: validacion.mensaje
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Codigo verificado exitosamente.'
+        });
+    } catch (e) {
+        return res.status(500).json({
+            status: 'error',
+            message: e.message
+        });
+    }
+}
+
 module.exports = {
+    solicitarCodigoRegistro,
+    verificarCodigoRegistro,
     registrar,
     registrarUsuario: registrar,
     login,

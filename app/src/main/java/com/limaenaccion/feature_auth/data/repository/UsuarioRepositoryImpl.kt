@@ -5,6 +5,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.limaenaccion.core.data.local.dao.ContactoDao
 import com.limaenaccion.core.data.local.dao.UsuarioDao
 import com.limaenaccion.core.data.local.entities.ContactoEntity
+import com.limaenaccion.core.data.local.entities.UsuarioEntity
+import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.network.model.RegisterRequest
 import com.limaenaccion.feature_auth.data.model.Usuario
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -22,10 +25,49 @@ class UsuarioRepositoryImpl(
 
     override suspend fun registrarUsuario(usuario: Usuario): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            coleccionUsuarios.document(usuario.uid)
-                .set(usuario)
-                .await()
+            // 1. Firebase Cloud Firestore
+            try {
+                coleccionUsuarios.document(usuario.uid)
+                    .set(usuario)
+                    .await()
+                Log.d("REPO_SYNC", "✅ Usuario registrado en Firebase Firestore: ${usuario.email}")
+            } catch (e: Exception) {
+                Log.w("REPO_SYNC", "⚠️ Firebase no disponible o sin conexión (${e.message})")
+            }
+
+            // 2. Backend Node.js REST API
+            try {
+                val apiReq = RegisterRequest(
+                    dni = usuario.dni,
+                    nombreCompleto = usuario.fullName,
+                    correo = usuario.email.trim().lowercase(),
+                    telefono = usuario.phoneNumber,
+                    genero = usuario.gender,
+                    distrito = usuario.district,
+                    urbanizacion = usuario.neighborhood,
+                    contrasena = usuario.password.ifBlank { usuario.contrasena }
+                )
+                RetrofitClient.instance.registerUser(apiReq)
+                Log.d("REPO_SYNC", "✅ Usuario registrado en Backend Node.js: ${usuario.email}")
+            } catch (e: Exception) {
+                Log.w("REPO_SYNC", "⚠️ Backend Node.js no disponible o sin conexión (${e.message})")
+            }
+
+            // 3. Cache local Room / SQLite
             usuarioDao.guardarUsuario(usuario)
+            val usuarioEntity = UsuarioEntity(
+                correo = usuario.email.trim().lowercase(),
+                dni = usuario.dni,
+                nombreCompleto = usuario.fullName,
+                genero = usuario.gender,
+                telefono = usuario.phoneNumber,
+                contrasena = usuario.password.ifBlank { usuario.contrasena },
+                distrito = usuario.district,
+                urbanizacion = usuario.neighborhood,
+                fotoPerfil = usuario.profilePhotoUrl
+            )
+            usuarioDao.guardarUsuario(usuarioEntity)
+            Log.d("REPO_SYNC", "✅ Usuario guardado en Room / SQLite local cache")
             Unit
         }
     }
@@ -134,6 +176,28 @@ class UsuarioRepositoryImpl(
 
     override suspend fun actualizarUsuario(usuario: Usuario): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            val emailLimpio = usuario.email.trim().lowercase()
+            val dniLimpio = usuario.dni.trim()
+
+            // 1. Sincronizar en Backend Node.js API
+            try {
+                val apiReq = RegisterRequest(
+                    dni = dniLimpio,
+                    nombreCompleto = usuario.fullName,
+                    correo = emailLimpio,
+                    telefono = usuario.phoneNumber,
+                    genero = usuario.gender,
+                    distrito = usuario.district,
+                    urbanizacion = usuario.neighborhood,
+                    contrasena = usuario.password.ifBlank { usuario.contrasena }
+                )
+                RetrofitClient.instance.updateProfile(apiReq)
+                Log.d("REPO_SYNC", "✅ Backend Node.js actualizado: $emailLimpio")
+            } catch (e: Exception) {
+                Log.w("REPO_SYNC", "⚠️ Backend Node.js no disponible o sin conexión (${e.message})")
+            }
+
+            // 2. Sincronizar en Firebase Firestore
             try {
                 val colecciones = listOf(coleccionUsuarios, coleccionUsers)
                 val updates = mutableMapOf<String, Any>()
@@ -163,30 +227,28 @@ class UsuarioRepositoryImpl(
                 }
 
                 var actualizado = false
-                val emailLimpio = usuario.email.trim().lowercase()
-
                 for (col in colecciones) {
                     if (emailLimpio.isNotBlank()) {
                         val queryEmail = col.whereEqualTo("email", emailLimpio).get().await()
                         for (doc in queryEmail.documents) {
                             doc.reference.update(updates).await()
                             actualizado = true
-                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por email en ${col.id}: ${doc.id}")
+                            Log.d("REPO_SYNC", "✅ Firestore actualizado por email en ${col.id}: ${doc.id}")
                         }
                         val queryCorreo = col.whereEqualTo("correo", emailLimpio).get().await()
                         for (doc in queryCorreo.documents) {
                             doc.reference.update(updates).await()
                             actualizado = true
-                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por correo en ${col.id}: ${doc.id}")
+                            Log.d("REPO_SYNC", "✅ Firestore actualizado por correo en ${col.id}: ${doc.id}")
                         }
                     }
 
-                    if (!actualizado && usuario.dni.isNotBlank()) {
-                        val queryDni = col.whereEqualTo("dni", usuario.dni.trim()).get().await()
+                    if (!actualizado && dniLimpio.isNotBlank()) {
+                        val queryDni = col.whereEqualTo("dni", dniLimpio).get().await()
                         for (doc in queryDni.documents) {
                             doc.reference.update(updates).await()
                             actualizado = true
-                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por DNI en ${col.id}: ${doc.id}")
+                            Log.d("REPO_SYNC", "✅ Firestore actualizado por DNI en ${col.id}: ${doc.id}")
                         }
                     }
 
@@ -194,14 +256,27 @@ class UsuarioRepositoryImpl(
                         try {
                             col.document(usuario.uid).update(updates).await()
                             actualizado = true
-                            Log.d("UPDATE_FIREBASE", "✅ Firestore actualizado por UID en ${col.id}: ${usuario.uid}")
+                            Log.d("REPO_SYNC", "✅ Firestore actualizado por UID en ${col.id}: ${usuario.uid}")
                         } catch (_: Exception) {}
                     }
                 }
             } catch (e: Exception) {
-                Log.e("UPDATE_FIREBASE", "Error al actualizar en Firestore: ${e.message}", e)
+                Log.w("REPO_SYNC", "⚠️ Error al actualizar en Firestore: ${e.message}")
             }
+
+            // 3. Cache local Room / SQLite
             usuarioDao.guardarUsuario(usuario)
+            usuarioDao.actualizarPerfilLocal(
+                correo = emailLimpio,
+                dni = dniLimpio,
+                nombre = usuario.fullName,
+                telefono = usuario.phoneNumber,
+                genero = usuario.gender,
+                distrito = usuario.district,
+                urbanizacion = usuario.neighborhood,
+                fotoPerfil = usuario.profilePhotoUrl
+            )
+            Log.d("REPO_SYNC", "✅ Perfil actualizado en Room / SQLite local cache")
             Unit
         }
     }
@@ -210,36 +285,57 @@ class UsuarioRepositoryImpl(
         runCatching {
             val emailLimpio = email.trim().lowercase()
             val dniLimpio = dni.trim()
-            val colecciones = listOf(coleccionUsuarios, coleccionUsers)
 
+            // 1. Eliminar en Backend Node.js API
             try {
+                val delReq = RegisterRequest(
+                    dni = dniLimpio,
+                    nombreCompleto = "",
+                    correo = emailLimpio,
+                    telefono = "",
+                    genero = "",
+                    distrito = "",
+                    urbanizacion = "",
+                    contrasena = ""
+                )
+                RetrofitClient.instance.deleteAccount(delReq)
+                Log.d("REPO_SYNC", "✅ Cuenta eliminada del backend Node.js: $emailLimpio")
+            } catch (e: Exception) {
+                Log.w("REPO_SYNC", "⚠️ Backend Node.js no disponible o sin conexión (${e.message})")
+            }
+
+            // 2. Eliminar en Firebase Firestore
+            try {
+                val colecciones = listOf(coleccionUsuarios, coleccionUsers)
                 for (col in colecciones) {
                     if (emailLimpio.isNotBlank()) {
                         val qEmail = col.whereEqualTo("email", emailLimpio).get().await()
                         for (doc in qEmail.documents) {
                             doc.reference.delete().await()
-                            Log.d("DELETE_FIREBASE", "🗑️ Doc ${doc.id} eliminado de ${col.id} por email")
+                            Log.d("REPO_SYNC", "🗑️ Doc ${doc.id} eliminado de ${col.id} por email")
                         }
                         val qCorreo = col.whereEqualTo("correo", emailLimpio).get().await()
                         for (doc in qCorreo.documents) {
                             doc.reference.delete().await()
-                            Log.d("DELETE_FIREBASE", "🗑️ Doc ${doc.id} eliminado de ${col.id} por correo")
+                            Log.d("REPO_SYNC", "🗑️ Doc ${doc.id} eliminado de ${col.id} por correo")
                         }
                     }
                     if (dniLimpio.isNotBlank()) {
                         val qDni = col.whereEqualTo("dni", dniLimpio).get().await()
                         for (doc in qDni.documents) {
                             doc.reference.delete().await()
-                            Log.d("DELETE_FIREBASE", "🗑️ Doc ${doc.id} eliminado por DNI de ${col.id}")
+                            Log.d("REPO_SYNC", "🗑️ Doc ${doc.id} eliminado por DNI de ${col.id}")
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.w("DELETE_FIREBASE", "Error al eliminar en Firestore remoto (${e.message})")
+                Log.w("REPO_SYNC", "⚠️ Error al eliminar en Firestore remoto (${e.message})")
             }
 
-            usuarioDao.eliminarPorCorreo(emailLimpio)
+            // 3. Eliminar en Room / SQLite local cache
+            usuarioDao.eliminarPorCorreoODni(emailLimpio, dniLimpio)
             usuarioDao.limpiarSesion()
+            Log.d("REPO_SYNC", "🗑️ Cuenta eliminada de Room / SQLite local cache")
             Unit
         }
     }

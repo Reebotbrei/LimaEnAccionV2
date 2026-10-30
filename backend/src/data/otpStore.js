@@ -1,21 +1,21 @@
 /**
- * Almacén en memoria de códigos OTP temporales para recuperación de contraseña.
- * Incluye expiración automática a los 10 minutos y límite de intentos contra ataques de fuerza bruta.
+ * Almacén en memoria de códigos OTP temporales (para registro y recuperación).
+ * Validez estricta de 1 minuto (60 segundos) y protección contra fuerza bruta.
  */
 
 const otps = new Map();
 
-const TTL_MS = 10 * 60 * 1000; // 10 minutos
+const DEFAULT_TTL_MS = 60 * 1000; // 1 minuto (60 segundos)
 const MAX_ATTEMPTS = 5;
 
 function generarCodigo6Digitos() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-function guardarOtp(correo) {
-    const key = correo.trim().toLowerCase();
+function guardarOtp(identificador, ttlMs = DEFAULT_TTL_MS) {
+    const key = String(identificador).trim().toLowerCase();
     const codigo = generarCodigo6Digitos();
-    const expiresAt = Date.now() + TTL_MS;
+    const expiresAt = Date.now() + ttlMs;
 
     otps.set(key, {
         codigo,
@@ -26,25 +26,25 @@ function guardarOtp(correo) {
     return { codigo, expiresAt };
 }
 
-function verificarOtp(correo, codigoIngresado) {
-    const key = correo.trim().toLowerCase();
+function verificarOtp(identificador, codigoIngresado) {
+    const key = String(identificador).trim().toLowerCase();
     const entry = otps.get(key);
 
     if (!entry) {
-        return { valido: false, mensaje: 'No hay ninguna solicitud de recuperación pendiente para este correo.' };
+        return { valido: false, mensaje: 'No hay ninguna solicitud de verificación pendiente para este usuario.' };
     }
 
     if (Date.now() > entry.expiresAt) {
         otps.delete(key);
-        return { valido: false, mensaje: 'El código ha expirado (validez: 10 min). Solicita uno nuevo.' };
+        return { valido: false, mensaje: 'El código ha expirado (validez: 1 minuto). Solicita un nuevo código.' };
     }
 
     if (entry.intentosRestantes <= 0) {
         otps.delete(key);
-        return { valido: false, mensaje: 'Superaste el límite de intentos permitidos. Solicita un código nuevo por seguridad.' };
+        return { valido: false, mensaje: 'Superaste el límite de intentos permitidos. Solicita un nuevo código.' };
     }
 
-    if (entry.codigo !== codigoIngresado.trim()) {
+    if (entry.codigo !== String(codigoIngresado).trim()) {
         entry.intentosRestantes -= 1;
         return {
             valido: false,
@@ -56,8 +56,8 @@ function verificarOtp(correo, codigoIngresado) {
     return { valido: true };
 }
 
-function consumirOtp(correo) {
-    otps.delete(correo.trim().toLowerCase());
+function consumirOtp(identificador) {
+    otps.delete(String(identificador).trim().toLowerCase());
 }
 
 module.exports = {

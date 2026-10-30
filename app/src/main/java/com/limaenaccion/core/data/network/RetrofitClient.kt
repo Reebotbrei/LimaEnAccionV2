@@ -20,7 +20,6 @@ object RetrofitClient {
 
     const val API_KEY = "LIMA_EN_ACCION_API_KEY_2026"
 
-    /** Detecta si el dispositivo es un emulador de Android */
     fun isEmulator(): Boolean {
         return (Build.FINGERPRINT.startsWith("generic")
                 || Build.FINGERPRINT.startsWith("unknown")
@@ -32,8 +31,8 @@ object RetrofitClient {
                 || "google_sdk" == Build.PRODUCT)
     }
 
-    // IP inicial predeterminada apuntando al servidor en la nube de Azure
-    var baseUrl: String = CLOUD_BASE_URL
+    // IP inicial predeterminada
+    var baseUrl: String = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_WIFI_BASE_URL
         private set
 
     @Volatile
@@ -96,19 +95,21 @@ object RetrofitClient {
             candidates.add(sanitized)
         }
 
-        // 2. Servidor en la nube de Azure (prioridad principal para no requerir servidor local)
-        candidates.add(CLOUD_BASE_URL)
-
-        // 3. Fallbacks de desarrollo local si se desea probar sin internet
+        // 2. Entorno según dispositivo: Emulador primero busca 10.0.2.2
         if (isEmulator()) {
             candidates.add(EMULATOR_BASE_URL)
         }
+
+        // 3. Fallbacks de red local Wi-Fi / USB / LAN de desarrollo
+        candidates.add(LOCAL_WIFI_BASE_URL)
         candidates.add(LOCAL_USB_URL)
         candidates.add(LOCAL_LAN_URL)
-        candidates.add(LOCAL_WIFI_BASE_URL)
         if (!isEmulator()) {
             candidates.add(EMULATOR_BASE_URL)
         }
+
+        // 4. Servidor en la nube
+        candidates.add(CLOUD_BASE_URL)
 
         val probeClient = OkHttpClient.Builder()
             .connectTimeout(1500, TimeUnit.MILLISECONDS)
@@ -132,9 +133,9 @@ object RetrofitClient {
             }
         }
 
-        val fallbackDefault = CLOUD_BASE_URL
+        val fallbackDefault = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_WIFI_BASE_URL
         setBaseUrl(fallbackDefault)
-        Log.i("AUTO_IP", "Entorno configurado automáticamente a $fallbackDefault (Tolerancia a fallos con Firebase activa).")
+        Log.i("AUTO_IP", "Entorno configurado automáticamente a $fallbackDefault")
         fallbackDefault
     }
 

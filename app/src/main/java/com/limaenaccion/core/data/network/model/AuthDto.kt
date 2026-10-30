@@ -96,3 +96,25 @@ data class GenericApiResponse(
     val status: String = "success",
     val message: String = ""
 )
+
+data class SendRegisterCodeRequest(
+    val email: String,
+    val dni: String,
+    val fullName: String = "",
+    val phoneNumber: String = "",
+    val correo: String = email,
+    val nombreCompleto: String = fullName,
+    val telefono: String = phoneNumber
+)
+
+data class RegisterCodeData(
+    val correo: String = "",
+    val telefono: String = "",
+    val debugCode: String = ""
+)
+
+data class SendRegisterCodeResponse(
+    val status: String = "success",
+    val message: String = "",
+    val data: RegisterCodeData? = null
+)

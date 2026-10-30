@@ -27,10 +27,16 @@ interface UsuarioDao {
     @Query("UPDATE usuarios SET contrasena = :nuevaContrasena WHERE LOWER(correo) = LOWER(:correo)")
     fun actualizarContrasena(correo: String, nuevaContrasena: String): Int
 
+    @Query("UPDATE usuarios SET nombreCompleto = :nombre, telefono = :telefono, genero = :genero, distrito = :distrito, urbanizacion = :urbanizacion, fotoPerfil = :fotoPerfil WHERE LOWER(correo) = LOWER(:correo) OR dni = :dni")
+    fun actualizarPerfilLocal(correo: String, dni: String, nombre: String, telefono: String, genero: String, distrito: String, urbanizacion: String, fotoPerfil: String): Int
+
     @Query("DELETE FROM usuarios WHERE LOWER(correo) = LOWER(:correo)")
     fun eliminarPorCorreo(correo: String): Int
 
-    // Métodos para Usuario
+    @Query("DELETE FROM usuarios WHERE LOWER(correo) = LOWER(:correo) OR dni = :dni")
+    fun eliminarPorCorreoODni(correo: String, dni: String): Int
+
+    // ── 2. Métodos para Usuario (Cache en Room de sesión activa) ──
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun guardarUsuario(usuario: Usuario): Long
 

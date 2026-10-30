@@ -1,8 +1,14 @@
 package com.limaenaccion.feature_auth.presentation
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -10,12 +16,15 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -34,6 +44,7 @@ import com.limaenaccion.core.ui.components.BrandLayout
 import com.limaenaccion.core.ui.components.DropdownField
 import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.util.LimaLocations
 import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.feature_auth.data.model.Gender
 
@@ -48,11 +59,32 @@ fun RegisterScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+
+    // Solicitud de permisos para sugerencia de ubicación por GPS
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        ) {
+            viewModel.onSuggestLocationFromGps(context)
+        }
+    }
 
     // Si la validación se completa con éxito, avanza a la verificación por SMS
     LaunchedEffect(uiState.registrationFinished) {
         if (uiState.registrationFinished) {
             onContinueToVerification()
+        }
+    }
+
+    // Auto-scroll hacia arriba si hay errores en los campos superiores
+    LaunchedEffect(uiState.generalError) {
+        if (!uiState.generalError.isNullOrBlank()) {
+            if (uiState.fullNameError != null || uiState.dniError != null || uiState.genderError != null) {
+                scrollState.animateScrollTo(0)
+            }
         }
     }
 
@@ -105,12 +137,12 @@ fun RegisterScreen(
                 // ───────────────────────────────────────────────
                 // 1. DATOS PERSONALES
                 // ───────────────────────────────────────────────
-                SectionHeader(strings.registerSectionPersonal)
+                SectionHeader("${strings.registerSectionPersonal} *")
 
                 OutlinedTextField(
                     value = uiState.fullName,
                     onValueChange = viewModel::onFullNameChange,
-                    label = { Text(strings.registerFullNameLabel) },
+                    label = { Text("${strings.registerFullNameLabel} *") },
                     placeholder = { Text(strings.registerFullNamePlaceholder) },
                     leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                     singleLine = true,
@@ -122,7 +154,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = uiState.dni,
                     onValueChange = viewModel::onDniChange,
-                    label = { Text(strings.registerDniLabel) },
+                    label = { Text("${strings.registerDniLabel} *") },
                     placeholder = { Text("12345678") },
                     leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = null) },
                     singleLine = true,
@@ -132,12 +164,26 @@ fun RegisterScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Género con chips responsivos
-                Column {
+                // Género con contenedor que se marca en rojo si falta seleccionar
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (uiState.genderError != null) {
+                                Modifier
+                                    .border(
+                                        width = 1.dp,
+                                        color = MaterialTheme.colorScheme.error,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(8.dp)
+                            } else Modifier
+                        )
+                ) {
                     Text(
-                        text = strings.registerGenderLabel,
+                        text = "${strings.registerGenderLabel} *",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (uiState.genderError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     FlowRow(
@@ -163,7 +209,7 @@ fun RegisterScreen(
                             text = uiState.genderError ?: "",
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
                         )
                     }
                 }
@@ -205,7 +251,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = uiState.password,
                     onValueChange = viewModel::onPasswordChange,
-                    label = { Text("${strings.loginPasswordLabel} *") },
+                    label = { Text("${strings.loginPasswordLabel} * (Mínimo 8 caracteres)") },
                     placeholder = { Text(strings.registerPasswordHelp) },
                     leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                     trailingIcon = {
@@ -231,40 +277,138 @@ fun RegisterScreen(
                 // ───────────────────────────────────────────────
                 SectionHeader(strings.registerSectionResidence)
 
+                // Botón para sugerir zona con GPS
+                OutlinedButton(
+                    onClick = {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (uiState.isLocatingGps) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Obteniendo posición GPS...", style = MaterialTheme.typography.labelMedium)
+                    } else {
+                        Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Sugerir zona con mi ubicación actual", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                if (!uiState.gpsSuggestionFeedback.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.LocationOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = uiState.gpsSuggestionFeedback.orEmpty(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // Selector de Distrito
                 DropdownField(
                     selectedValue = uiState.district,
                     placeholder = strings.registerDistrictPlaceholder,
-                    options = MOCK_DISTRICTS,
+                    options = LimaLocations.ALL_DISTRICT_NAMES,
                     isError = uiState.districtError != null,
                     errorMessage = uiState.districtError,
                     icon = Icons.Filled.Map,
                     onOptionSelected = viewModel::onDistrictChange
                 )
 
+                // Selector de Urbanización / Barrio Dinámico según el Distrito
+                val neighborhoods = if (!uiState.district.isNullOrBlank()) {
+                    uiState.availableNeighborhoods.ifEmpty { LimaLocations.getNeighborhoods(uiState.district) }
+                } else {
+                    listOf(LimaLocations.OTRO_BARRIO)
+                }
+
+                val currentSelectedNeighborhood = if (uiState.isCustomNeighborhood) {
+                    LimaLocations.OTRO_BARRIO
+                } else {
+                    uiState.neighborhood
+                }
+
                 DropdownField(
-                    selectedValue = uiState.neighborhood,
-                    placeholder = strings.registerNeighborhoodPlaceholder,
-                    options = MOCK_NEIGHBORHOODS,
-                    isError = uiState.neighborhoodError != null,
-                    errorMessage = uiState.neighborhoodError,
+                    selectedValue = currentSelectedNeighborhood,
+                    placeholder = if (uiState.district.isNullOrBlank()) "Primero selecciona un distrito" else strings.registerNeighborhoodPlaceholder,
+                    options = neighborhoods,
+                    isError = uiState.neighborhoodError != null && !uiState.isCustomNeighborhood,
+                    errorMessage = if (!uiState.isCustomNeighborhood) uiState.neighborhoodError else null,
                     icon = Icons.Filled.Home,
                     onOptionSelected = viewModel::onNeighborhoodChange
                 )
 
-                if (uiState.generalError != null) {
-                    Text(
-                        text = uiState.generalError ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                // Campo de texto libre si seleccionó "Otro"
+                if (uiState.isCustomNeighborhood) {
+                    OutlinedTextField(
+                        value = uiState.customNeighborhoodText,
+                        onValueChange = viewModel::onCustomNeighborhoodChange,
+                        label = { Text("Escribe tu urbanización o barrio *") },
+                        placeholder = { Text("Ej. Urb. Las Palmeras, Sector 4, Asoc. Los Pinos") },
+                        singleLine = true,
+                        isError = uiState.neighborhoodError != null,
+                        supportingText = uiState.neighborhoodError?.let { { Text(it) } },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                // Banner de error general visible encima del botón
+                if (!uiState.generalError.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = uiState.generalError.orEmpty(),
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Botón principal de registro responsivo
                 PrimaryButton(
-                    text = if (uiState.isLoading) "..." else strings.registerSubmitBtn,
+                    text = if (uiState.isLoading) "Registrando cuenta..." else strings.registerSubmitBtn,
                     onClick = viewModel::onRegisterSubmitClicked,
                     enabled = !uiState.isLoading,
                     modifier = Modifier.fillMaxWidth()

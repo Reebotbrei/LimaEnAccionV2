@@ -1,13 +1,16 @@
 package com.limaenaccion.feature_auth.presentation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,9 +33,13 @@ import com.limaenaccion.core.util.LocalAppStrings
 @Composable
 fun SmsVerificationScreen(
     phoneNumber: String,
+    email: String = "",
+    simulatedSmsNotice: String? = null,
     onNavigateBack: () -> Unit,
     onVerified: () -> Unit,
     onCancelRegistration: () -> Unit = onNavigateBack,
+    onVerifyCode: ((String, (Boolean, String?) -> Unit) -> Unit)? = null,
+    onResendCode: (((Boolean, String?) -> Unit) -> Unit)? = null,
     viewModel: SmsVerificationViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -53,8 +60,8 @@ fun SmsVerificationScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Verificación")
-                        Text("Código de seguridad", style = MaterialTheme.typography.labelSmall)
+                        Text("Verificación de Seguridad")
+                        Text("Activación de Cuenta", style = MaterialTheme.typography.labelSmall)
                     }
                 },
                 navigationIcon = {
@@ -70,21 +77,86 @@ fun SmsVerificationScreen(
             )
         },
         bottomBar = {
-            PrimaryButton(
-                text = "Verificar y Acceder",
-                onClick = viewModel::onVerifyClicked,
-                modifier = Modifier.padding(16.dp)
-            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                PrimaryButton(
+                    text = if (uiState.isVerifying) "Verificando..." else "Verificar y Crear Cuenta",
+                    onClick = {
+                        val code = uiState.fullCode
+                        if (code.length < 6) {
+                            viewModel.setError("Ingresa el código completo de 6 dígitos")
+                            return@PrimaryButton
+                        }
+                        if (uiState.secondsRemaining <= 0) {
+                            viewModel.setError("El código ha expirado (validez de 1 minuto). Pulsa en 'Reenviar' para generar uno nuevo.")
+                            return@PrimaryButton
+                        }
+                        viewModel.setVerifying(true)
+                        if (onVerifyCode != null) {
+                            onVerifyCode(code) { success, errorMsg ->
+                                viewModel.setVerifying(false)
+                                if (success) {
+                                    viewModel.setVerified(true)
+                                } else {
+                                    viewModel.setError(errorMsg ?: "Código de verificación incorrecto")
+                                }
+                            }
+                        } else {
+                            viewModel.setVerified(true)
+                        }
+                    },
+                    enabled = !uiState.isVerifying,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Banner de SMS celular simulado en pantalla
+            if (!simulatedSmsNotice.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Sms,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "SMS Recibido en tu Celular",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = simulatedSmsNotice,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -92,18 +164,20 @@ fun SmsVerificationScreen(
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Sms, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.MarkEmailRead, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Verifica tu número", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+            Text("Verifica tu Identidad", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                "Hemos enviado un código SMS de 6 dígitos al celular $phoneNumber. Por favor, ingrésalo a continuación.",
+                text = "Hemos enviado un código de 6 dígitos a tu celular $phoneNumber ${if (email.isNotBlank()) "y a tu correo Gmail $email" else ""}.\n\nVálido durante 1 minuto (60 segundos).",
                 textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
+            // Casillas de 6 dígitos
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 uiState.codeDigits.forEachIndexed { index, digit ->
                     OutlinedTextField(
@@ -118,7 +192,7 @@ fun SmsVerificationScreen(
                             }
                         },
                         singleLine = true,
-                        textStyle = TextStyle(textAlign = TextAlign.Center, fontSize = 18.sp),
+                        textStyle = TextStyle(textAlign = TextAlign.Center, fontSize = 20.sp, fontWeight = FontWeight.Bold),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = uiState.codeError != null,
                         modifier = Modifier
@@ -129,42 +203,66 @@ fun SmsVerificationScreen(
             }
 
             if (uiState.codeError != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(uiState.codeError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "❌ ${uiState.codeError!!}",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
             if (uiState.canResend) {
-                Row {
-                    Text("¿No recibiste el código? ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("¿No recibiste el código? ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     Text(
-                        "Reenviar",
+                        "Reenviar código",
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.clickable(onClick = viewModel::onResendClicked)
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.clickable {
+                            viewModel.resetDigits()
+                            if (onResendCode != null) {
+                                onResendCode { success, errorMsg ->
+                                    if (!success && errorMsg != null) {
+                                        viewModel.setError(errorMsg)
+                                    }
+                                }
+                            }
+                        }
                     )
                 }
             } else {
                 Text(
-                    "¿No recibiste el código? Reenviar en 0:${uiState.secondsRemaining.toString().padStart(2, '0')}",
+                    "Reenviar nuevo código en 0:${uiState.secondsRemaining.toString().padStart(2, '0')} min",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Enlaces para corregir número o cancelar
+            // Enlaces para corregir datos o cancelar
             Text(
-                text = strings.smsWrongNumberBtn,
+                text = "Modificar datos o corregir celular",
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.clickable(onClick = onNavigateBack)
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = strings.smsCancelRegistrationBtn,
