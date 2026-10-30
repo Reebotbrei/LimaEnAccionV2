@@ -31,8 +31,8 @@ object RetrofitClient {
                 || "google_sdk" == Build.PRODUCT)
     }
 
-    // IP inicial predeterminada
-    var baseUrl: String = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_WIFI_BASE_URL
+    // IP inicial predeterminada apuntando al servidor en la nube de Azure
+    var baseUrl: String = CLOUD_BASE_URL
         private set
 
     @Volatile
@@ -83,8 +83,8 @@ object RetrofitClient {
 
     /**
      * Detección y adaptación automática de IP en segundo plano:
-     * Prueba los candidatos más probables según el entorno (Emulador, Celular USB, Wi-Fi LAN o Nube)
-     * y fija automáticamente la primera URL que responda.
+     * Prioriza la nube de Azure para no requerir servidor local encendido.
+     * Si no hay internet, busca fallbacks en la red local.
      */
     suspend fun autoDetectAndAdapt(savedPrefUrl: String? = null): String = withContext(Dispatchers.IO) {
         val candidates = mutableListOf<String>()
@@ -95,21 +95,19 @@ object RetrofitClient {
             candidates.add(sanitized)
         }
 
-        // 2. Entorno según dispositivo: Emulador primero busca 10.0.2.2
+        // 2. Servidor en la nube de Azure (prioridad #1)
+        candidates.add(CLOUD_BASE_URL)
+
+        // 3. Fallbacks de red local Wi-Fi / USB / Emulador
         if (isEmulator()) {
             candidates.add(EMULATOR_BASE_URL)
         }
-
-        // 3. Fallbacks de red local Wi-Fi / USB / LAN de desarrollo
         candidates.add(LOCAL_WIFI_BASE_URL)
         candidates.add(LOCAL_USB_URL)
         candidates.add(LOCAL_LAN_URL)
         if (!isEmulator()) {
             candidates.add(EMULATOR_BASE_URL)
         }
-
-        // 4. Servidor en la nube
-        candidates.add(CLOUD_BASE_URL)
 
         val probeClient = OkHttpClient.Builder()
             .connectTimeout(1500, TimeUnit.MILLISECONDS)
@@ -123,7 +121,7 @@ object RetrofitClient {
                 val response = probeClient.newCall(request).execute()
                 if (response.isSuccessful) {
                     response.close()
-                    Log.i("AUTO_IP", "✅ Servidor Node.js detectado automáticamente y activo: $candidate")
+                    Log.i("AUTO_IP", "✅ Servidor detectado automáticamente y activo: $candidate")
                     setBaseUrl(candidate)
                     return@withContext candidate
                 }
@@ -133,7 +131,7 @@ object RetrofitClient {
             }
         }
 
-        val fallbackDefault = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_WIFI_BASE_URL
+        val fallbackDefault = CLOUD_BASE_URL
         setBaseUrl(fallbackDefault)
         Log.i("AUTO_IP", "Entorno configurado automáticamente a $fallbackDefault")
         fallbackDefault

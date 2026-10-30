@@ -45,22 +45,18 @@ class MainActivity : ComponentActivity() {
             prefs.setServerBaseUrl(detectedUrl)
             Log.d("LIMA_CONFIG", "Backend URL configurada automáticamente: $detectedUrl")
 
-            // Restaurar sesión del usuario si está activado "Recordar sesión"
+            // Restaurar sesión del usuario solo si está activado "Recordar sesión" y hay un UID activo
             val remember = prefs.rememberSession.first()
             val sessionUid = prefs.activeSessionUid.first()
-            if (remember) {
+            if (remember && sessionUid.isNotBlank()) {
                 withContext(Dispatchers.IO) {
                     try {
                         val db = AppDatabase.getInstance(applicationContext)
                         val dao = db.usuarioDao()
-                        var restoredEntity: UsuarioEntity? = null
+                        var restoredEntity: UsuarioEntity? = dao.obtenerPorCorreo(sessionUid)
+                            ?: dao.obtenerPorDni(sessionUid)
 
-                        if (sessionUid.isNotBlank()) {
-                            restoredEntity = dao.obtenerPorCorreo(sessionUid)
-                                ?: dao.obtenerPorDni(sessionUid)
-                        }
-
-                        if (restoredEntity == null && sessionUid.isNotBlank()) {
+                        if (restoredEntity == null) {
                             val cacheUser = dao.obtenerUsuario(sessionUid)
                             if (cacheUser != null) {
                                 restoredEntity = UsuarioEntity(
@@ -74,26 +70,6 @@ class MainActivity : ComponentActivity() {
                                     contrasena = cacheUser.password,
                                     fotoPerfil = cacheUser.profilePhotoUrl
                                 )
-                            }
-                        }
-
-                        // Si por UID no encontró, buscar el último registrado o en caché de la app
-                        if (restoredEntity == null) {
-                            val primerCache = dao.obtenerPrimerUsuarioCache()
-                            if (primerCache != null) {
-                                restoredEntity = UsuarioEntity(
-                                    correo = primerCache.email,
-                                    dni = primerCache.dni,
-                                    nombreCompleto = primerCache.fullName,
-                                    genero = primerCache.gender,
-                                    telefono = primerCache.phoneNumber,
-                                    distrito = primerCache.district,
-                                    urbanizacion = primerCache.neighborhood,
-                                    contrasena = primerCache.password,
-                                    fotoPerfil = primerCache.profilePhotoUrl
-                                )
-                            } else {
-                                restoredEntity = dao.obtenerUltimoUsuarioRegistrado()
                             }
                         }
 

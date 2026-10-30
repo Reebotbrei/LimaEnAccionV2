@@ -79,6 +79,7 @@ async function enviarCodigoVerificacionRegistro(destinatario, nombre, codigo) {
 
 /**
  * Envía el código OTP de recuperación de contraseña con plantilla HTML profesional.
+ * Validez estándar de 10 minutos para dar tiempo a la recepción y apertura del correo.
  */
 async function enviarCodigoRecuperacion(destinatario, nombre, codigo) {
     const htmlContent = `
@@ -117,7 +118,7 @@ async function enviarCodigoRecuperacion(destinatario, nombre, codigo) {
                 </div>
                 <div class="code-box">
                     <div class="code">${codigo}</div>
-                    <div class="expiry">⏱️ Válido por 1 minuto (un solo uso)</div>
+                    <div class="expiry">⏱️ Válido por 10 minutos (un solo uso)</div>
                 </div>
                 <div class="warning">
                     ⚠️ <strong>Aviso de Seguridad:</strong> Si tú no solicitaste este cambio, no te preocupes; tu cuenta sigue protegida. Puedes ignorar este mensaje o reportarlo a soporte.
@@ -136,7 +137,7 @@ async function enviarCodigoRecuperacion(destinatario, nombre, codigo) {
         from: '"Lima en Acción · Soporte" <soportelimaenaccion@gmail.com>',
         to: destinatario,
         subject: `🔐 ${codigo} es tu código de recuperación - Lima en Acción`,
-        text: `Hola ${nombre || 'Vecino'},\n\nTu código de recuperación para Lima en Acción es: ${codigo}\n\nVálido por 1 minuto.\n\nSi no solicitaste este código, ignora este mensaje.`,
+        text: `Hola ${nombre || 'Vecino'},\n\nTu código de recuperación para Lima en Acción es: ${codigo}\n\nVálido por 10 minutos.\n\nSi no solicitaste este código, ignora este mensaje.`,
         html: htmlContent
     };
 

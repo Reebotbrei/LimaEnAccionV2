@@ -1,11 +1,12 @@
 /**
  * Almacén en memoria de códigos OTP temporales (para registro y recuperación).
- * Validez estricta de 1 minuto (60 segundos) y protección contra fuerza bruta.
+ * Validez: 10 minutos para recuperación de contraseña, 1 minuto para SMS de registro.
+ * Incluye protección contra fuerza bruta (máximo 5 intentos).
  */
 
 const otps = new Map();
 
-const DEFAULT_TTL_MS = 60 * 1000; // 1 minuto (60 segundos)
+const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 minutos para recuperación de contraseña
 const MAX_ATTEMPTS = 5;
 
 function generarCodigo6Digitos() {
@@ -36,7 +37,7 @@ function verificarOtp(identificador, codigoIngresado) {
 
     if (Date.now() > entry.expiresAt) {
         otps.delete(key);
-        return { valido: false, mensaje: 'El código ha expirado (validez: 1 minuto). Solicita un nuevo código.' };
+        return { valido: false, mensaje: 'El código ha expirado. Solicita un nuevo código.' };
     }
 
     if (entry.intentosRestantes <= 0) {

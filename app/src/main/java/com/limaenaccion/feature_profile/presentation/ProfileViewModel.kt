@@ -32,18 +32,17 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
-        // Si el usuario en memoria está vacío al entrar al perfil, restaurarlo desde SQLite Room
+        // Si el usuario en memoria está vacío al entrar al perfil, restaurarlo solo si hay sesión activa recordada
         if (SessionManager.currentUser.value == null) {
             viewModelScope.launch {
                 withContext(Dispatchers.IO) {
                     try {
                         val prefs = PreferencesRepositoryImpl(getApplication())
+                        val remember = prefs.rememberSession.first()
                         val uid = prefs.activeSessionUid.first()
-                        val dao = AppDatabase.getInstance(getApplication()).usuarioDao()
-                        var local: UsuarioEntity? = null
-
-                        if (uid.isNotBlank()) {
-                            local = dao.obtenerPorCorreo(uid) ?: dao.obtenerPorDni(uid)
+                        if (remember && uid.isNotBlank()) {
+                            val dao = AppDatabase.getInstance(getApplication()).usuarioDao()
+                            var local: UsuarioEntity? = dao.obtenerPorCorreo(uid) ?: dao.obtenerPorDni(uid)
                             if (local == null) {
                                 val cache = dao.obtenerUsuario(uid)
                                 if (cache != null) {
@@ -60,30 +59,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                                     )
                                 }
                             }
-                        }
 
-                        if (local == null) {
-                            val primerCache = dao.obtenerPrimerUsuarioCache()
-                            if (primerCache != null) {
-                                local = UsuarioEntity(
-                                    correo = primerCache.email,
-                                    dni = primerCache.dni,
-                                    nombreCompleto = primerCache.fullName,
-                                    genero = primerCache.gender,
-                                    telefono = primerCache.phoneNumber,
-                                    distrito = primerCache.district,
-                                    urbanizacion = primerCache.neighborhood,
-                                    contrasena = primerCache.password,
-                                    fotoPerfil = primerCache.profilePhotoUrl
-                                )
-                            } else {
-                                local = dao.obtenerUltimoUsuarioRegistrado()
+                            if (local != null) {
+                                SessionManager.setCurrentUser(local)
+                                Log.d("PROFILE_VIEWMODEL", "✅ Usuario restaurado desde Room: ${local.correo} (${local.nombreCompleto})")
                             }
-                        }
-
-                        if (local != null) {
-                            SessionManager.setCurrentUser(local)
-                            Log.d("PROFILE_VIEWMODEL", "✅ Usuario restaurado desde Room: ${local.correo} (${local.nombreCompleto})")
                         }
                     } catch (e: Exception) {
                         Log.w("PROFILE_VIEWMODEL", "Error restaurando usuario: ${e.message}")
