@@ -5,9 +5,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MarkEmailRead
@@ -44,6 +46,7 @@ fun SmsVerificationScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
+    val scrollState = rememberScrollState()
     val focusRequesters = remember { List(6) { FocusRequester() } }
 
     // Intercepta la flecha atrás del celular para volver a la pantalla de registro
@@ -75,50 +78,17 @@ fun SmsVerificationScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
-        },
-        bottomBar = {
-            Column(modifier = Modifier.padding(16.dp)) {
-                PrimaryButton(
-                    text = if (uiState.isVerifying) "Verificando..." else "Verificar y Crear Cuenta",
-                    onClick = {
-                        val code = uiState.fullCode
-                        if (code.length < 6) {
-                            viewModel.setError("Ingresa el código completo de 6 dígitos")
-                            return@PrimaryButton
-                        }
-                        if (uiState.secondsRemaining <= 0) {
-                            viewModel.setError("El código ha expirado (validez de 1 minuto). Pulsa en 'Reenviar' para generar uno nuevo.")
-                            return@PrimaryButton
-                        }
-                        viewModel.setVerifying(true)
-                        if (onVerifyCode != null) {
-                            onVerifyCode(code) { success, errorMsg ->
-                                viewModel.setVerifying(false)
-                                if (success) {
-                                    viewModel.setVerified(true)
-                                } else {
-                                    viewModel.setError(errorMsg ?: "Código de verificación incorrecto")
-                                }
-                            }
-                        } else {
-                            viewModel.setVerified(true)
-                        }
-                    },
-                    enabled = !uiState.isVerifying,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(20.dp),
+                .imePadding()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Banner de SMS celular simulado en pantalla
             if (!simulatedSmsNotice.isNullOrBlank()) {
                 Surface(
@@ -159,14 +129,14 @@ fun SmsVerificationScreen(
 
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(60.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.MarkEmailRead, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                Icon(Icons.Filled.MarkEmailRead, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
             }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text("Verifica tu Identidad", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
@@ -178,7 +148,10 @@ fun SmsVerificationScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Casillas de 6 dígitos
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(vertical = 4.dp)
+            ) {
                 uiState.codeDigits.forEachIndexed { index, digit ->
                     OutlinedTextField(
                         value = digit,
@@ -251,7 +224,40 @@ fun SmsVerificationScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Botón Principal responsivo dentro del scroll
+            PrimaryButton(
+                text = if (uiState.isVerifying) "Verificando..." else "Verificar y Crear Cuenta",
+                onClick = {
+                    val code = uiState.fullCode
+                    if (code.length < 6) {
+                        viewModel.setError("Ingresa el código completo de 6 dígitos")
+                        return@PrimaryButton
+                    }
+                    if (uiState.secondsRemaining <= 0) {
+                        viewModel.setError("El código ha expirado (validez de 1 minuto). Pulsa en 'Reenviar' para generar uno nuevo.")
+                        return@PrimaryButton
+                    }
+                    viewModel.setVerifying(true)
+                    if (onVerifyCode != null) {
+                        onVerifyCode(code) { success, errorMsg ->
+                            viewModel.setVerifying(false)
+                            if (success) {
+                                viewModel.setVerified(true)
+                            } else {
+                                viewModel.setError(errorMsg ?: "Código de verificación incorrecto")
+                            }
+                        }
+                    } else {
+                        viewModel.setVerified(true)
+                    }
+                },
+                enabled = !uiState.isVerifying,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Enlaces para corregir datos o cancelar
             Text(
@@ -270,6 +276,8 @@ fun SmsVerificationScreen(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.clickable(onClick = onCancelRegistration)
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

@@ -1,5 +1,33 @@
 [
   {
+    "id": "rep_1793388820234",
+    "usuarioId": "usr_vecino_01",
+    "tipo": "SOS",
+    "titulo": "ALERTA SOS DE EMERGENCIA",
+    "descripcion": "Alerta SOS emitida por ciudadano en peligro",
+    "latitud": -12.019542,
+    "longitud": -77.014231,
+    "fotoUrl": null,
+    "estado": "REPORTADO",
+    "esSos": true,
+    "creadoEn": "2026-10-30T19:33:40.234Z",
+    "venceEn": "2026-10-31T07:33:40.234Z"
+  },
+  {
+    "id": "rep_1793388785739",
+    "usuarioId": "usr_vecino_01",
+    "tipo": "SOS",
+    "titulo": "ALERTA SOS DE EMERGENCIA",
+    "descripcion": "Alerta SOS emitida por ciudadano en peligro",
+    "latitud": -12.019542,
+    "longitud": -77.014231,
+    "fotoUrl": null,
+    "estado": "REPORTADO",
+    "esSos": true,
+    "creadoEn": "2026-10-30T19:33:05.739Z",
+    "venceEn": "2026-10-31T07:33:05.739Z"
+  },
+  {
     "id": "rep_1793132720780",
     "falseReportsCount": 1,
     "usuarioNombre": "Prueba",

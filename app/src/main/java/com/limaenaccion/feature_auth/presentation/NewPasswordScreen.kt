@@ -1,6 +1,8 @@
 package com.limaenaccion.feature_auth.presentation
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
@@ -29,6 +31,7 @@ fun NewPasswordScreen(
     viewModel: NewPasswordViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(email, code) {
         viewModel.initCredentials(email, code)
@@ -67,6 +70,8 @@ fun NewPasswordScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
+                .verticalScroll(scrollState)
                 .padding(24.dp)
         ) {
             Text(
