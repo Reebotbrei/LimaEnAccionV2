@@ -58,7 +58,13 @@ class ForgotPasswordViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, emailError = null)
             try {
-                apiServiceProvider().forgotPassword(ForgotPasswordRequest(email))
+                try {
+                    apiServiceProvider().forgotPassword(ForgotPasswordRequest(email))
+                } catch (io: IOException) {
+                    // Intenta autodetectar backend si cambió la IP
+                    RetrofitClient.autoDetectAndAdapt()
+                    apiServiceProvider().forgotPassword(ForgotPasswordRequest(email))
+                }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     showCodeDialog = true,
@@ -122,7 +128,12 @@ class ForgotPasswordViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isVerifyingCode = true, codeError = null)
             try {
-                apiServiceProvider().verifyResetCode(VerifyResetCodeRequest(email, code))
+                try {
+                    apiServiceProvider().verifyResetCode(VerifyResetCodeRequest(email, code))
+                } catch (io: IOException) {
+                    RetrofitClient.autoDetectAndAdapt()
+                    apiServiceProvider().verifyResetCode(VerifyResetCodeRequest(email, code))
+                }
                 _uiState.value = _uiState.value.copy(
                     isVerifyingCode = false,
                     codeVerified = true,
