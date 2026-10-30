@@ -16,7 +16,7 @@ object RetrofitClient {
     const val LOCAL_USB_URL = "http://127.0.0.1:3000/"
     const val LOCAL_LAN_URL = "http://192.168.18.27:3000/"
     const val LOCAL_WIFI_BASE_URL = "http://192.168.0.158:3000/"
-    const val CLOUD_BASE_URL = "https://limaenaccion-api.onrender.com/"
+    const val CLOUD_BASE_URL = "https://lima-en-accion-api-gmf3fxhgg6dwgxhj.eastus-01.azurewebsites.net/"
 
     const val API_KEY = "LIMA_EN_ACCION_API_KEY_2026"
 
@@ -32,8 +32,8 @@ object RetrofitClient {
                 || "google_sdk" == Build.PRODUCT)
     }
 
-    // IP automática inicial según el entorno
-    var baseUrl: String = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_LAN_URL
+    // IP inicial predeterminada apuntando al servidor en la nube de Azure
+    var baseUrl: String = CLOUD_BASE_URL
         private set
 
     @Volatile
@@ -96,21 +96,19 @@ object RetrofitClient {
             candidates.add(sanitized)
         }
 
-        // 2. Si es emulador, 10.0.2.2 es la prioridad #1
+        // 2. Servidor en la nube de Azure (prioridad principal para no requerir servidor local)
+        candidates.add(CLOUD_BASE_URL)
+
+        // 3. Fallbacks de desarrollo local si se desea probar sin internet
         if (isEmulator()) {
             candidates.add(EMULATOR_BASE_URL)
         }
-
-        // 3. IPs de desarrollo local (USB adb reverse y Wi-Fi)
         candidates.add(LOCAL_USB_URL)
         candidates.add(LOCAL_LAN_URL)
         candidates.add(LOCAL_WIFI_BASE_URL)
         if (!isEmulator()) {
             candidates.add(EMULATOR_BASE_URL)
         }
-
-        // 4. Servidor en la nube (Render)
-        candidates.add(CLOUD_BASE_URL)
 
         val probeClient = OkHttpClient.Builder()
             .connectTimeout(1500, TimeUnit.MILLISECONDS)
@@ -134,7 +132,7 @@ object RetrofitClient {
             }
         }
 
-        val fallbackDefault = if (isEmulator()) EMULATOR_BASE_URL else LOCAL_LAN_URL
+        val fallbackDefault = CLOUD_BASE_URL
         setBaseUrl(fallbackDefault)
         Log.i("AUTO_IP", "Entorno configurado automáticamente a $fallbackDefault (Tolerancia a fallos con Firebase activa).")
         fallbackDefault
