@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.data.local.AppDatabase
+import com.limaenaccion.core.data.local.SqliteDatabaseHelper
+import com.limaenaccion.core.data.local.entities.ContactoEntity
 import com.limaenaccion.core.data.local.entities.UsuarioEntity
 import com.limaenaccion.core.data.network.RetrofitClient
 import com.limaenaccion.core.data.network.model.LoginRequest
@@ -17,11 +19,13 @@ import com.limaenaccion.feature_auth.data.repository.AuthLocalRepository
 import com.limaenaccion.feature_auth.data.repository.AuthLocalRepositoryImpl
 import com.limaenaccion.feature_auth.data.repository.UsuarioRepository
 import com.limaenaccion.feature_auth.data.repository.UsuarioRepositoryImpl
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
@@ -44,12 +48,17 @@ class LoginViewModel @JvmOverloads constructor(
     private val authLocalRepository: AuthLocalRepository = AuthLocalRepositoryImpl(application),
     private val prefsRepository: PreferencesRepository = PreferencesRepositoryImpl(application),
     private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(
-        usuarioDao = AppDatabase.getInstance(application).usuarioDao()
+        usuarioDao = AppDatabase.getInstance(application).usuarioDao(),
+        contactoDao = AppDatabase.getInstance(application).contactoDao()
     )
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
+    private val usuarioDao = AppDatabase.getInstance(application).usuarioDao()
+    private val contactoDao = AppDatabase.getInstance(application).contactoDao()
+    private val sqliteHelper = SqliteDatabaseHelper.getInstance(application)
 
     init {
         // Cargar URL del servidor y preferencia de "Recordar sesión"
@@ -141,6 +150,7 @@ class LoginViewModel @JvmOverloads constructor(
                 servidorNodeRespondio = true
                 if (response.status == "success" && response.data != null) {
                     val user = response.data
+                    val foto = user.fotoPerfil.ifBlank { user.profilePhotoUrl }
                     val entity = UsuarioEntity(
                         correo = user.email.ifBlank { user.correo },
                         dni = user.dni,
@@ -149,10 +159,38 @@ class LoginViewModel @JvmOverloads constructor(
                         telefono = user.phoneNumber.ifBlank { user.telefono },
                         distrito = user.district.ifBlank { user.distrito },
                         urbanizacion = user.neighborhood.ifBlank { user.urbanizacion },
-                        contrasena = state.password
+                        contrasena = state.password,
+                        fotoPerfil = foto
                     )
                     SessionManager.setCurrentUser(entity)
                     persistirSesion(user.uid.ifBlank { user.id }, state.rememberSession)
+
+                    withContext(Dispatchers.IO) {
+                        try {
+                            usuarioDao.guardarUsuario(entity)
+                            sqliteHelper.guardarUsuario(entity)
+                            if (user.contactosAuxilio.isNotEmpty()) {
+                                contactoDao.eliminarTodos()
+                                for (c in user.contactosAuxilio) {
+                                    contactoDao.guardarContacto(
+                                        ContactoEntity(
+                                            id = c.id.toLongOrNull() ?: 0L,
+                                            nombre = c.nombre,
+                                            telefono = c.telefono,
+                                            parentesco = c.parentesco,
+                                            esPrincipal = c.esPrincipal,
+                                            correoUsuario = entity.correo
+                                        )
+                                    )
+                                }
+                            } else {
+                                usuarioRepository.sincronizarContactosDesdeNube(entity.correo)
+                            }
+                        } catch (e: Exception) {
+                            Log.w("LOGIN_FLOW", "Error guardando cache de usuario: ${e.message}")
+                        }
+                    }
+
                     Log.i("LOGIN_FLOW", "✅ Login exitoso consumiendo API Service (Node.js): ${entity.correo}")
                     _uiState.value = _uiState.value.copy(isLoading = false, loginSuccess = true)
                     return@launch
@@ -183,33 +221,39 @@ class LoginViewModel @JvmOverloads constructor(
 
             // ── 2. Fallback a Firebase Cloud Firestore (Anthony) ──
             val resultFirestore = usuarioRepository.loginConFirestore(state.email.trim(), state.password)
-            var authPorFirebase = false
-            resultFirestore.fold(
-                onSuccess = { fbUser ->
-                    if (fbUser != null) {
-                        val entity = UsuarioEntity(
-                            correo = fbUser.email,
-                            dni = fbUser.dni,
-                            nombreCompleto = fbUser.fullName,
-                            genero = fbUser.gender,
-                            telefono = fbUser.phoneNumber,
-                            distrito = fbUser.district,
-                            urbanizacion = fbUser.neighborhood,
-                            contrasena = state.password
-                        )
-                        SessionManager.setCurrentUser(entity)
-                        persistirSesion(fbUser.uid, state.rememberSession)
-                        Log.i("LOGIN_FLOW", " Login exitoso via Firebase Cloud Firestore: ${entity.correo}")
-                        _uiState.value = _uiState.value.copy(isLoading = false, loginSuccess = true)
-                        authPorFirebase = true
-                    }
-                },
-                onFailure = { error ->
-                    Log.w("LOGIN_FLOW", "⚠️ Firebase no disponible (${error.message}). Probando SQLite local...")
-                }
-            )
+            val fbUser = resultFirestore.getOrNull()
+            if (fbUser != null) {
+                val foto = fbUser.profilePhotoUrl
+                val entity = UsuarioEntity(
+                    correo = fbUser.email,
+                    dni = fbUser.dni,
+                    nombreCompleto = fbUser.fullName,
+                    genero = fbUser.gender,
+                    telefono = fbUser.phoneNumber,
+                    distrito = fbUser.district,
+                    urbanizacion = fbUser.neighborhood,
+                    contrasena = state.password,
+                    fotoPerfil = foto
+                )
+                SessionManager.setCurrentUser(entity)
+                persistirSesion(fbUser.uid, state.rememberSession)
 
-            if (authPorFirebase) return@launch
+                withContext(Dispatchers.IO) {
+                    try {
+                        usuarioDao.guardarUsuario(entity)
+                        sqliteHelper.guardarUsuario(entity)
+                        usuarioRepository.sincronizarContactosDesdeNube(entity.correo)
+                    } catch (e: Exception) {
+                        Log.w("LOGIN_FLOW", "Error guardando cache de usuario: ${e.message}")
+                    }
+                }
+
+                Log.i("LOGIN_FLOW", " Login exitoso via Firebase Cloud Firestore: ${entity.correo}")
+                _uiState.value = _uiState.value.copy(isLoading = false, loginSuccess = true)
+                return@launch
+            } else if (resultFirestore.isFailure) {
+                Log.w("LOGIN_FLOW", "⚠️ Firebase no disponible (${resultFirestore.exceptionOrNull()?.message}). Probando SQLite local...")
+            }
 
             // ── 3. Fallback a base de datos SQLite / Room local (Requerimiento b) ──
             when (val result = authLocalRepository.loginUser(state.email, state.password)) {

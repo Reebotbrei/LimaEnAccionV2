@@ -100,7 +100,8 @@ class EditPersonalDataViewModel @JvmOverloads constructor(
                         email = updatedUser.correo,
                         phoneNumber = updatedUser.telefono,
                         district = updatedUser.distrito,
-                        neighborhood = updatedUser.urbanizacion
+                        neighborhood = updatedUser.urbanizacion,
+                        profilePhotoUrl = updatedUser.fotoPerfil
                     )
                     usuarioRepository.actualizarUsuario(fbUser)
                     Log.d("EDIT_PROFILE", "✅ Guardado en Firebase Firestore")
@@ -126,7 +127,9 @@ class EditPersonalDataViewModel @JvmOverloads constructor(
                             distrito = updatedUser.distrito,
                             district = updatedUser.distrito,
                             urbanizacion = updatedUser.urbanizacion,
-                            neighborhood = updatedUser.urbanizacion
+                            neighborhood = updatedUser.urbanizacion,
+                            fotoPerfil = updatedUser.fotoPerfil,
+                            profilePhotoUrl = updatedUser.fotoPerfil
                         )
                     )
                     Log.d("EDIT_PROFILE", "✅ Guardado en API Service Node.js")

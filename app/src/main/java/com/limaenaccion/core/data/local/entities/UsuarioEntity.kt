@@ -14,5 +14,6 @@ data class UsuarioEntity(
     val contrasena: String,
     val distrito: String,
     val urbanizacion: String,
-    val fechaRegistro: Long = System.currentTimeMillis()
+    val fechaRegistro: Long = System.currentTimeMillis(),
+    val fotoPerfil: String = ""
 )

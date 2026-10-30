@@ -30,7 +30,10 @@ function sanitizarUsuario(usuario) {
         distrito: district,
         district: district,
         urbanizacion: neighborhood,
-        neighborhood: neighborhood
+        neighborhood: neighborhood,
+        fotoPerfil: usuario.fotoPerfil || usuario.profilePhotoUrl || '',
+        profilePhotoUrl: usuario.fotoPerfil || usuario.profilePhotoUrl || '',
+        contactosAuxilio: Array.isArray(usuario.contactosAuxilio) ? usuario.contactosAuxilio : []
     };
 }
 
@@ -241,6 +244,16 @@ async function actualizar(req, res) {
         if (urb) {
             datos.urbanizacion = urb;
             datos.neighborhood = urb;
+        }
+
+        const foto = body.fotoPerfil !== undefined ? body.fotoPerfil : body.profilePhotoUrl;
+        if (foto !== undefined) {
+            datos.fotoPerfil = String(foto);
+            datos.profilePhotoUrl = String(foto);
+        }
+
+        if (body.contactosAuxilio !== undefined && Array.isArray(body.contactosAuxilio)) {
+            datos.contactosAuxilio = body.contactosAuxilio;
         }
 
         const clave = correo || dni;

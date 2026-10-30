@@ -1,5 +1,6 @@
 package com.limaenaccion.feature_auth.data.repository
 
+import com.limaenaccion.core.data.local.entities.ContactoEntity
 import com.limaenaccion.feature_auth.data.model.Usuario
 import kotlinx.coroutines.flow.Flow
 
@@ -24,4 +25,10 @@ interface UsuarioRepository {
 
     // 7. Elimina la cuenta del usuario en Firestore (nube) y en Room (caché local)
     suspend fun eliminarCuenta(email: String, dni: String): Result<Unit>
+
+    // 8. Actualiza los contactos de auxilio en Firebase Firestore
+    suspend fun actualizarContactosAuxilio(correo: String, contactos: List<ContactoEntity>): Result<Unit>
+
+    // 9. Sincroniza los contactos de auxilio de la nube hacia Room local
+    suspend fun sincronizarContactosDesdeNube(correo: String): Result<List<ContactoEntity>>
 }

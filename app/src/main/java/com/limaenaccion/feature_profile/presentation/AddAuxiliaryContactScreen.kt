@@ -101,7 +101,7 @@ fun AddAuxiliaryContactScreen(
                 onValueChange = viewModel::onFullNameChange,
                 label = { Text(strings.fullNameField) },
                 leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
-                placeholder = { Text("Ej. Luz Cachuda") },
+                placeholder = { Text("Ej. María López") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

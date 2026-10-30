@@ -143,6 +143,7 @@ class AuthLocalRepositoryImpl(
                         AuthErrorField.GENERAL
                     )
 
+                val foto = dto.fotoPerfil.ifBlank { dto.profilePhotoUrl }
                 val loggedInUser = UsuarioEntity(
                     correo = dto.correo,
                     dni = dto.dni,
@@ -151,7 +152,8 @@ class AuthLocalRepositoryImpl(
                     telefono = dto.telefono,
                     contrasena = password,
                     distrito = dto.distrito,
-                    urbanizacion = dto.urbanizacion
+                    urbanizacion = dto.urbanizacion,
+                    fotoPerfil = foto
                 )
 
                 // Sincroniza en SQLite local y activa sesión efímera en RAM ("No recordar sesión")

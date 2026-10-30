@@ -16,7 +16,7 @@ class SqliteDatabaseHelper(context: Context) :
 
     companion object {
         const val DATABASE_NAME = "lima_en_accion_sqlite.db"
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 2
 
         const val TABLE_USUARIOS = "usuarios"
         const val COL_CORREO = "correo"
@@ -28,6 +28,7 @@ class SqliteDatabaseHelper(context: Context) :
         const val COL_DISTRITO = "distrito"
         const val COL_URBANIZACION = "urbanizacion"
         const val COL_FECHA_REGISTRO = "fecha_registro"
+        const val COL_FOTO_PERFIL = "foto_perfil"
 
         @Volatile
         private var INSTANCE: SqliteDatabaseHelper? = null
@@ -50,15 +51,20 @@ class SqliteDatabaseHelper(context: Context) :
                 $COL_CONTRASENA TEXT NOT NULL,
                 $COL_DISTRITO TEXT NOT NULL,
                 $COL_URBANIZACION TEXT NOT NULL,
-                $COL_FECHA_REGISTRO INTEGER NOT NULL
+                $COL_FECHA_REGISTRO INTEGER NOT NULL,
+                $COL_FOTO_PERFIL TEXT DEFAULT ''
             )
         """.trimIndent()
         db.execSQL(createTableSql)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_USUARIOS")
-        onCreate(db)
+        try {
+            db.execSQL("ALTER TABLE $TABLE_USUARIOS ADD COLUMN $COL_FOTO_PERFIL TEXT DEFAULT ''")
+        } catch (_: Exception) {
+            db.execSQL("DROP TABLE IF EXISTS $TABLE_USUARIOS")
+            onCreate(db)
+        }
     }
 
     fun guardarUsuario(usuario: UsuarioEntity): Long {
@@ -73,6 +79,7 @@ class SqliteDatabaseHelper(context: Context) :
             put(COL_DISTRITO, usuario.distrito)
             put(COL_URBANIZACION, usuario.urbanizacion)
             put(COL_FECHA_REGISTRO, usuario.fechaRegistro)
+            put(COL_FOTO_PERFIL, usuario.fotoPerfil)
         }
         return db.insertWithOnConflict(
             TABLE_USUARIOS,
@@ -105,6 +112,8 @@ class SqliteDatabaseHelper(context: Context) :
         )
         return cursor.use {
             if (it.moveToFirst()) {
+                val fotoIndex = it.getColumnIndex(COL_FOTO_PERFIL)
+                val fotoVal = if (fotoIndex != -1) it.getString(fotoIndex) ?: "" else ""
                 UsuarioEntity(
                     correo = it.getString(it.getColumnIndexOrThrow(COL_CORREO)),
                     dni = it.getString(it.getColumnIndexOrThrow(COL_DNI)),
@@ -114,11 +123,10 @@ class SqliteDatabaseHelper(context: Context) :
                     contrasena = it.getString(it.getColumnIndexOrThrow(COL_CONTRASENA)),
                     distrito = it.getString(it.getColumnIndexOrThrow(COL_DISTRITO)),
                     urbanizacion = it.getString(it.getColumnIndexOrThrow(COL_URBANIZACION)),
-                    fechaRegistro = it.getLong(it.getColumnIndexOrThrow(COL_FECHA_REGISTRO))
+                    fechaRegistro = it.getLong(it.getColumnIndexOrThrow(COL_FECHA_REGISTRO)),
+                    fotoPerfil = fotoVal
                 )
-            } else {
-                null
-            }
+            } else null
         }
     }
 
@@ -136,6 +144,8 @@ class SqliteDatabaseHelper(context: Context) :
         )
         return cursor.use {
             if (it.moveToFirst()) {
+                val fotoIndex = it.getColumnIndex(COL_FOTO_PERFIL)
+                val fotoVal = if (fotoIndex != -1) it.getString(fotoIndex) ?: "" else ""
                 UsuarioEntity(
                     correo = it.getString(it.getColumnIndexOrThrow(COL_CORREO)),
                     dni = it.getString(it.getColumnIndexOrThrow(COL_DNI)),
@@ -145,7 +155,8 @@ class SqliteDatabaseHelper(context: Context) :
                     contrasena = it.getString(it.getColumnIndexOrThrow(COL_CONTRASENA)),
                     distrito = it.getString(it.getColumnIndexOrThrow(COL_DISTRITO)),
                     urbanizacion = it.getString(it.getColumnIndexOrThrow(COL_URBANIZACION)),
-                    fechaRegistro = it.getLong(it.getColumnIndexOrThrow(COL_FECHA_REGISTRO))
+                    fechaRegistro = it.getLong(it.getColumnIndexOrThrow(COL_FECHA_REGISTRO)),
+                    fotoPerfil = fotoVal
                 )
             } else {
                 null

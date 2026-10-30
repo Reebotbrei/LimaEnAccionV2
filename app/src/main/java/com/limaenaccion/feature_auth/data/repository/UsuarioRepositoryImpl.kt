@@ -2,7 +2,9 @@ package com.limaenaccion.feature_auth.data.repository
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
+import com.limaenaccion.core.data.local.dao.ContactoDao
 import com.limaenaccion.core.data.local.dao.UsuarioDao
+import com.limaenaccion.core.data.local.entities.ContactoEntity
 import com.limaenaccion.feature_auth.data.model.Usuario
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +13,8 @@ import kotlinx.coroutines.withContext
 
 class UsuarioRepositoryImpl(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val usuarioDao: UsuarioDao
+    private val usuarioDao: UsuarioDao,
+    private val contactoDao: ContactoDao? = null
 ) : UsuarioRepository {
 
     private val coleccionUsuarios = firestore.collection("usuarios")
@@ -154,6 +157,10 @@ class UsuarioRepositoryImpl(
                     updates["neighborhood"] = usuario.neighborhood
                     updates["urbanizacion"] = usuario.neighborhood
                 }
+                if (usuario.profilePhotoUrl.isNotBlank()) {
+                    updates["profilePhotoUrl"] = usuario.profilePhotoUrl
+                    updates["fotoPerfil"] = usuario.profilePhotoUrl
+                }
 
                 var actualizado = false
                 val emailLimpio = usuario.email.trim().lowercase()
@@ -234,6 +241,89 @@ class UsuarioRepositoryImpl(
             usuarioDao.eliminarPorCorreo(emailLimpio)
             usuarioDao.limpiarSesion()
             Unit
+        }
+    }
+
+    override suspend fun actualizarContactosAuxilio(correo: String, contactos: List<ContactoEntity>): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val emailLimpio = correo.trim().lowercase()
+            val listMap = contactos.map { c ->
+                mapOf(
+                    "id" to c.id.toString(),
+                    "nombre" to c.nombre,
+                    "parentesco" to c.parentesco,
+                    "telefono" to c.telefono,
+                    "esPrincipal" to c.esPrincipal
+                )
+            }
+            val colecciones = listOf(coleccionUsuarios, coleccionUsers)
+            for (col in colecciones) {
+                if (emailLimpio.isNotBlank()) {
+                    val qEmail = col.whereEqualTo("email", emailLimpio).get().await()
+                    for (doc in qEmail.documents) {
+                        doc.reference.update("contactosAuxilio", listMap).await()
+                        Log.d("UPDATE_FIREBASE", "✅ Contactos actualizados en ${col.id}: ${doc.id}")
+                    }
+                    val qCorreo = col.whereEqualTo("correo", emailLimpio).get().await()
+                    for (doc in qCorreo.documents) {
+                        doc.reference.update("contactosAuxilio", listMap).await()
+                        Log.d("UPDATE_FIREBASE", "✅ Contactos actualizados en ${col.id}: ${doc.id}")
+                    }
+                }
+            }
+            Unit
+        }
+    }
+
+    override suspend fun sincronizarContactosDesdeNube(correo: String): Result<List<ContactoEntity>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val emailLimpio = correo.trim().lowercase()
+            val colecciones = listOf(coleccionUsuarios, coleccionUsers)
+            var listaRaw: List<Map<String, Any>>? = null
+
+            for (col in colecciones) {
+                if (listaRaw != null && listaRaw.isNotEmpty()) break
+                if (emailLimpio.isNotBlank()) {
+                    val qEmail = col.whereEqualTo("email", emailLimpio).get().await()
+                    for (doc in qEmail.documents) {
+                        @Suppress("UNCHECKED_CAST")
+                        val raw = doc.get("contactosAuxilio") as? List<Map<String, Any>>
+                        if (raw != null) {
+                            listaRaw = raw
+                            break
+                        }
+                    }
+                    if (listaRaw == null) {
+                        val qCorreo = col.whereEqualTo("correo", emailLimpio).get().await()
+                        for (doc in qCorreo.documents) {
+                            @Suppress("UNCHECKED_CAST")
+                            val raw = doc.get("contactosAuxilio") as? List<Map<String, Any>>
+                            if (raw != null) {
+                                listaRaw = raw
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+
+            val resultList = mutableListOf<ContactoEntity>()
+            if (listaRaw != null && contactoDao != null) {
+                contactoDao.eliminarTodos()
+                for (item in listaRaw) {
+                    val entity = ContactoEntity(
+                        id = (item["id"] as? String)?.toLongOrNull() ?: 0L,
+                        nombre = item["nombre"] as? String ?: "",
+                        parentesco = item["parentesco"] as? String ?: "",
+                        telefono = item["telefono"] as? String ?: "",
+                        esPrincipal = item["esPrincipal"] as? Boolean ?: false,
+                        correoUsuario = emailLimpio
+                    )
+                    contactoDao.guardarContacto(entity)
+                    resultList.add(entity)
+                }
+            }
+            resultList
         }
     }
 }

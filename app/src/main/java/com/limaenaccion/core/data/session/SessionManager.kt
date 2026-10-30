@@ -1,6 +1,9 @@
 package com.limaenaccion.core.data.session
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import android.util.Log
 import com.limaenaccion.core.data.local.entities.UsuarioEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,10 +39,39 @@ object SessionManager {
 
     fun startTransientSession(user: UsuarioEntity) {
         _currentUser.value = user
+        if (user.fotoPerfil.isNotBlank()) {
+            applyProfilePhoto(user.fotoPerfil)
+        }
     }
 
     fun setCurrentUser(user: UsuarioEntity) {
         startTransientSession(user)
+    }
+
+    fun applyProfilePhoto(photoUrl: String) {
+        if (photoUrl.isBlank()) {
+            _currentAvatar.value = AvatarOption.DEFAULT
+            _customPhotoBitmap.value = null
+            return
+        }
+        if (photoUrl.startsWith("avatar:")) {
+            val avatarName = photoUrl.removePrefix("avatar:")
+            val option = try { AvatarOption.valueOf(avatarName) } catch (_: Exception) { AvatarOption.DEFAULT }
+            _currentAvatar.value = option
+            _customPhotoBitmap.value = null
+        } else if (photoUrl.startsWith("data:image") || photoUrl.length > 50) {
+            val clean = if (photoUrl.contains(",")) photoUrl.substringAfter(",") else photoUrl
+            try {
+                val bytes = Base64.decode(clean, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (bitmap != null) {
+                    _currentAvatar.value = AvatarOption.DEFAULT
+                    _customPhotoBitmap.value = bitmap
+                }
+            } catch (e: Exception) {
+                Log.w("SESSION_MANAGER", "Error al decodificar foto de perfil Base64: ${e.message}")
+            }
+        }
     }
 
     fun updateProfilePhoto(avatar: AvatarOption, bitmap: Bitmap? = null) {

@@ -1,11 +1,18 @@
 package com.limaenaccion.feature_profile.presentation
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.limaenaccion.core.data.local.AppDatabase
 import com.limaenaccion.core.data.local.dao.ContactoDao
 import com.limaenaccion.core.data.local.entities.ContactoEntity
+import com.limaenaccion.core.data.network.RetrofitClient
+import com.limaenaccion.core.data.network.model.ContactoDto
+import com.limaenaccion.core.data.network.model.RegisterRequest
+import com.limaenaccion.core.data.session.SessionManager
+import com.limaenaccion.feature_auth.data.repository.UsuarioRepository
+import com.limaenaccion.feature_auth.data.repository.UsuarioRepositoryImpl
 import com.limaenaccion.feature_profile.data.model.ContactRelationship
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,14 +30,18 @@ data class AddAuxiliaryContactUiState(
     val maxContactsReached: Boolean = false,
     val errorMessage: String? = null
 ) {
-    // Validación mínima para no dejar campos vacíos
+    // RNF / Criterio de aceptación: Nombre válido y número móvil peruano de 9 dígitos iniciando en 9
     val isFormValid: Boolean
-        get() = fullName.isNotBlank() && phoneNumber.length >= 6
+        get() = fullName.trim().length >= 3 && phoneNumber.length == 9 && phoneNumber.startsWith("9")
 }
 
 class AddAuxiliaryContactViewModel @JvmOverloads constructor(
     application: Application,
-    private val contactoDao: ContactoDao = AppDatabase.getInstance(application).contactoDao()
+    private val contactoDao: ContactoDao = AppDatabase.getInstance(application).contactoDao(),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(
+        usuarioDao = AppDatabase.getInstance(application).usuarioDao(),
+        contactoDao = AppDatabase.getInstance(application).contactoDao()
+    )
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(AddAuxiliaryContactUiState())
@@ -87,18 +98,54 @@ class AddAuxiliaryContactViewModel @JvmOverloads constructor(
                 return@launch
             }
 
+            val currentUser = SessionManager.currentUser.value
+            val userEmail = currentUser?.correo?.trim()?.lowercase() ?: ""
+
             val entity = ContactoEntity(
                 nombre = state.fullName.trim(),
                 telefono = state.phoneNumber.trim(),
                 parentesco = state.relationship.label,
-                esPrincipal = state.isPrimaryContact
+                esPrincipal = state.isPrimaryContact,
+                correoUsuario = userEmail
             )
 
-            // Persistencia local en Room (SQLite)
+            // 1. Persistencia local en Room (SQLite)
             if (state.isPrimaryContact) {
                 contactoDao.desmarcarPrincipales()
             }
             contactoDao.guardarContacto(entity)
+
+            // 2. Sincronización en Firebase Cloud Firestore y Azure Backend
+            val allContacts = contactoDao.obtenerListaTodos()
+            if (userEmail.isNotBlank()) {
+                try {
+                    usuarioRepository.actualizarContactosAuxilio(userEmail, allContacts)
+                    Log.d("ADD_CONTACT", "✅ Contacto guardado y sincronizado con Firebase Firestore")
+                } catch (e: Exception) {
+                    Log.w("ADD_CONTACT", "Error al sincronizar con Firestore: ${e.message}")
+                }
+
+                try {
+                    RetrofitClient.instance.updateProfile(
+                        RegisterRequest(
+                            email = userEmail,
+                            correo = userEmail,
+                            contactosAuxilio = allContacts.map {
+                                ContactoDto(
+                                    id = it.id.toString(),
+                                    nombre = it.nombre,
+                                    telefono = it.telefono,
+                                    parentesco = it.parentesco,
+                                    esPrincipal = it.esPrincipal
+                                )
+                            }
+                        )
+                    )
+                    Log.d("ADD_CONTACT", "✅ Contacto guardado y sincronizado con Azure Backend")
+                } catch (e: Exception) {
+                    Log.w("ADD_CONTACT", "Error al sincronizar con Backend: ${e.message}")
+                }
+            }
 
             withContext(Dispatchers.Main) {
                 _uiState.value = state.copy(contactSaved = true)

@@ -57,6 +57,29 @@ function docToUsuario(doc) {
     u.uid = u.uid || docId;
     u.id = u.id || docId;
 
+    // Foto de perfil
+    const foto = f.fotoPerfil?.stringValue || f.profilePhotoUrl?.stringValue || u.fotoPerfil || u.profilePhotoUrl || '';
+    u.fotoPerfil = foto;
+    u.profilePhotoUrl = foto;
+
+    // Contactos de auxilio
+    if (f.contactosAuxilio?.arrayValue?.values && Array.isArray(f.contactosAuxilio.arrayValue.values)) {
+        u.contactosAuxilio = f.contactosAuxilio.arrayValue.values.map(v => {
+            const cf = (v.mapValue && v.mapValue.fields) ? v.mapValue.fields : {};
+            return {
+                id: cf.id?.stringValue || '',
+                nombre: cf.nombre?.stringValue || '',
+                parentesco: cf.parentesco?.stringValue || '',
+                telefono: cf.telefono?.stringValue || '',
+                esPrincipal: cf.esPrincipal?.booleanValue !== undefined ? cf.esPrincipal.booleanValue : false
+            };
+        });
+    } else if (Array.isArray(u.contactosAuxilio)) {
+        // mantener arreglo
+    } else {
+        u.contactosAuxilio = [];
+    }
+
     return u;
 }
 
@@ -75,6 +98,7 @@ function usuarioToFirestoreFields(u) {
     const urbanizacion = u.urbanizacion || u.neighborhood || '';
     const genero = u.genero || u.gender || '';
     const contrasena = u.contrasena || u.password || '';
+    const foto = u.fotoPerfil || u.profilePhotoUrl || '';
 
     if (uid) fields.id = { stringValue: uid };
     if (dni) fields.dni = { stringValue: dni };
@@ -85,6 +109,27 @@ function usuarioToFirestoreFields(u) {
     if (urbanizacion) fields.urbanizacion = { stringValue: urbanizacion };
     if (genero) fields.genero = { stringValue: genero };
     if (contrasena) fields.contrasena = { stringValue: contrasena };
+    if (foto) {
+        fields.fotoPerfil = { stringValue: foto };
+        fields.profilePhotoUrl = { stringValue: foto };
+    }
+    if (Array.isArray(u.contactosAuxilio)) {
+        fields.contactosAuxilio = {
+            arrayValue: {
+                values: u.contactosAuxilio.map(c => ({
+                    mapValue: {
+                        fields: {
+                            id: { stringValue: String(c.id || '') },
+                            nombre: { stringValue: String(c.nombre || '') },
+                            parentesco: { stringValue: String(c.parentesco || '') },
+                            telefono: { stringValue: String(c.telefono || '') },
+                            esPrincipal: { booleanValue: Boolean(c.esPrincipal) }
+                        }
+                    }
+                }))
+            }
+        };
+    }
 
     const fecha = u.creadoEn || (u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString());
     fields.creadoEn = { stringValue: String(fecha) };

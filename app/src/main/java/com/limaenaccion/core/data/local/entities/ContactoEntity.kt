@@ -10,5 +10,6 @@ data class ContactoEntity(
     val nombre: String,
     val telefono: String,
     val parentesco: String = "",
-    val esPrincipal: Boolean = true
+    val esPrincipal: Boolean = true,
+    val correoUsuario: String = ""
 )

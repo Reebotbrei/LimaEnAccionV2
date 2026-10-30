@@ -19,7 +19,7 @@ import com.limaenaccion.feature_auth.data.model.Usuario
         UsuarioEntity::class,
         Usuario::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

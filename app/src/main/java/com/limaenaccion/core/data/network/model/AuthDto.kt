@@ -7,6 +7,14 @@ data class LoginRequest(
     val contrasena: String = password
 )
 
+data class ContactoDto(
+    val id: String = "",
+    val nombre: String = "",
+    val telefono: String = "",
+    val parentesco: String = "",
+    val esPrincipal: Boolean = false
+)
+
 data class RegisterRequest(
     val fullName: String = "",
     val dni: String = "",
@@ -16,6 +24,9 @@ data class RegisterRequest(
     val password: String = "",
     val district: String = "",
     val neighborhood: String = "",
+    val fotoPerfil: String = "",
+    val profilePhotoUrl: String = fotoPerfil,
+    val contactosAuxilio: List<ContactoDto> = emptyList(),
 
     val nombreCompleto: String = fullName,
     val genero: String = gender,
@@ -42,6 +53,9 @@ data class UserDto(
     val distrito: String = district,
     val neighborhood: String = "",
     val urbanizacion: String = neighborhood,
+    val fotoPerfil: String = "",
+    val profilePhotoUrl: String = fotoPerfil,
+    val contactosAuxilio: List<ContactoDto> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val creadoEn: String? = null
 )
