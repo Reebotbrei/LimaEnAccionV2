@@ -34,16 +34,25 @@ interface ApiService {
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
     @POST("/api/v1/auth/verify-register-code")
     suspend fun verifyRegisterCode(@Body request: VerifyResetCodeRequest): GenericApiResponse
-
-    // Requerimiento (c): Registro de usuario consumiendo API Service (Node.js)
+//REQUERIMIENTOS
+    // Registro y login de usuario consumiendo API Service (Node.js)
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
     @POST("/api/v1/auth/register")
     suspend fun registerUser(@Body request: RegisterRequest): AuthResponse
 
-    // Requerimiento (c): Inicio de sesión consumiendo API Service (Node.js)
+    // Inicio de sesión
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
     @POST("/api/v1/auth/login")
     suspend fun loginUser(@Body request: LoginRequest): AuthResponse
+    // Publicar y listar reportes
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @POST("/api/v1/reportes")
+    suspend fun createReport(@Body request: CreateReportRequest): ReportResponse
+
+    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
+    @GET("/api/v1/reportes")
+    suspend fun getReports(): ReportListResponse
+
 
     // Actualizar perfil consumiendo API Service (Node.js)
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
@@ -68,13 +77,4 @@ interface ApiService {
     @POST("/api/v1/auth/reset-password")
     suspend fun resetPassword(@Body request: ResetPasswordRequest): GenericApiResponse
 
-    // US-03 / API-01: Crear reporte en el backend
-    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
-    @POST("/api/v1/reportes")
-    suspend fun createReport(@Body request: CreateReportRequest): ReportResponse
-
-    // US-02 / US-06 / API-03: Listar reportes vigentes del backend
-    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
-    @GET("/api/v1/reportes")
-    suspend fun getReports(): ReportListResponse
 }
