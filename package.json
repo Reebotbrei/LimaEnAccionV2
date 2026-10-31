@@ -1,7 +1,7 @@
 {
   "name": "lima-en-accion-root",
   "version": "1.0.0",
-  "description": "Root configuration to guarantee deployment on Render",
+  "description": "Configuración del backend para Lima en Acción",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",

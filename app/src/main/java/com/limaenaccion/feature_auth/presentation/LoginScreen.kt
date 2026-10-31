@@ -301,24 +301,4 @@ fun LoginScreen(
             }
         )
     }
-
-    // ── Diálogo modal flotante de desarrollador (sólo accesible mediante pulsación larga en el logo) ──
-    if (uiState.showServerConfig) {
-        Dialog(
-            onDismissRequest = viewModel::onDismissServerConfig,
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-            ) {
-                ServerConfigCard(
-                    currentUrl = uiState.serverUrl,
-                    onUrlConfirmed = viewModel::onServerUrlChanged,
-                    onDismiss = viewModel::onDismissServerConfig
-                )
-            }
-        }
-    }
 }

@@ -44,7 +44,7 @@ fun ServerConfigCard(
     var inputUrl by remember { mutableStateOf(currentUrl) }
 
     val presets = listOf(
-        Triple("Render (Nube)", Icons.Filled.Cloud, "https://limaenaccion-api.onrender.com/"),
+        Triple("Azure (Nube)", Icons.Filled.Cloud, "https://lima-en-accion-api-gmf3fxhgg6dwgxhj.eastus-01.azurewebsites.net/"),
         Triple("Emulador Android", Icons.Filled.Computer, "http://10.0.2.2:3000/"),
         Triple("Red Wi-Fi Local (PC)", Icons.Filled.Wifi, "http://192.168.18.27:3000/"),
         Triple("Cable USB (adb reverse)", Icons.Filled.Usb, "http://127.0.0.1:3000/")
@@ -187,14 +187,14 @@ fun ServerStatusChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isCloud = serverUrl.contains("onrender") || serverUrl.contains("ngrok")
+    val isCloud = serverUrl.contains("azurewebsites") || serverUrl.contains("ngrok")
     val isLocal = serverUrl.contains("10.0.2.2") || serverUrl.contains("192.168") || serverUrl.contains("127.0.0.1")
 
     val label = when {
         serverUrl.contains("127.0.0.1") -> "⚡ USB Directo"
         serverUrl.contains("10.0.2.2") -> "⚡ Auto (Emulador)"
         serverUrl.contains("192.168") -> "⚡ Auto (Wi-Fi Local)"
-        isCloud -> "☁️ Nube (Render)"
+        isCloud -> "☁️ Nube (Azure)"
         else -> "🌐 Automático"
     }
 
