@@ -4,11 +4,6 @@ import com.google.gson.annotations.SerializedName
 
 /**
  * DTOs de Autenticación y Perfil para Retrofit 2 con Gson.
- *
- * Utiliza @SerializedName para definir el nombre canónico del campo en el contrato JSON,
- * y 'alternate' para compatibilidad retroactiva con nombres en inglés o alias del backend.
- * Se incluyen constructores secundarios de conveniencia para garantizar interoperabilidad
- * en llamadas que usen parámetros con nombres en inglés (email, password, etc.).
  */
 
 data class LoginRequest(
@@ -17,7 +12,8 @@ data class LoginRequest(
 
     @SerializedName("contrasena", alternate = ["password"])
     val contrasena: String = ""
-) {
+)
+{
     // Constructor de conveniencia para invocaciones con parámetros en inglés (email, password)
     constructor(email: String, password: String, isEnglish: Boolean = true) : this(
         correo = email,

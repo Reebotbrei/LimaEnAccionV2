@@ -48,7 +48,8 @@ object RetrofitClient {
                 val request = requestBuilder.build()
                 Log.d("API_NETWORK", "🚀 [CONSUMIENDO API] ${request.method()} -> ${request.url()}")
                 val response = chain.proceed(request)
-                Log.d("API_NETWORK", "📥 [RESPUESTA API] Código: ${response.code()} (${if (response.isSuccessful) "OK" else "Error"}) de ${request.url()}")
+                Log.d("API_NETWORK", "📥 [RESPUESTA API] Código: ${response.code()} " +
+                        "(${if (response.isSuccessful) "OK" else "Error"}) de ${request.url()}")
                 response
             }
             .connectTimeout(3, TimeUnit.SECONDS)
