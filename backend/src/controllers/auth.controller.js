@@ -77,7 +77,7 @@ async function registrar(req, res) {
 
         // Hashing de contraseña con Bcrypt (seguridad de nivel producción)
         const passwordHash = await bcrypt.hash(String(contrasena), 10);
-        const uid = `usr_${Date.now()}`;
+        const uid = (body.id || body.uid || `usr_${Date.now()}`).trim();
 
         const nuevoUsuario = {
             id: uid,

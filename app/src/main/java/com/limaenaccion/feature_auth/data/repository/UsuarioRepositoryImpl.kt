@@ -25,39 +25,49 @@ class UsuarioRepositoryImpl(
 
     override suspend fun registrarUsuario(usuario: Usuario): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            // 1. Firebase Cloud Firestore
-            try {
-                coleccionUsuarios.document(usuario.uid)
-                    .set(usuario)
-                    .await()
-                Log.d("REPO_SYNC", "✅ Usuario registrado en Firebase Firestore: ${usuario.email}")
-            } catch (e: Exception) {
-                Log.w("REPO_SYNC", "⚠️ Firebase no disponible o sin conexión (${e.message})")
-            }
+            val emailLimpio = usuario.email.trim().lowercase()
+            val dniLimpio = usuario.dni.trim()
+            var registradoEnBackend = false
 
-            // 2. Backend Node.js REST API
+            // 1. Backend REST API (Fuente de Verdad principal: hashea con Bcrypt y crea 1 solo documento en Firestore)
             try {
                 val apiReq = RegisterRequest(
-                    dni = usuario.dni,
+                    id = usuario.uid,
+                    dni = dniLimpio,
                     nombreCompleto = usuario.fullName,
-                    correo = usuario.email.trim().lowercase(),
+                    correo = emailLimpio,
                     telefono = usuario.phoneNumber,
                     genero = usuario.gender,
                     distrito = usuario.district,
                     urbanizacion = usuario.neighborhood,
                     contrasena = usuario.password.ifBlank { usuario.contrasena }
                 )
-                RetrofitClient.instance.registerUser(apiReq)
-                Log.d("REPO_SYNC", "✅ Usuario registrado en Backend Node.js: ${usuario.email}")
+                val resp = RetrofitClient.instance.registerUser(apiReq)
+                if (resp.status == "success") {
+                    registradoEnBackend = true
+                    Log.d("REPO_SYNC", "✅ Usuario registrado en Backend Node.js y sincronizado con Firestore: $emailLimpio")
+                }
             } catch (e: Exception) {
                 Log.w("REPO_SYNC", "⚠️ Backend Node.js no disponible o sin conexión (${e.message})")
+            }
+
+            // 2. Firebase Cloud Firestore (Fallback directo solo si el backend no pudo guardarlo)
+            if (!registradoEnBackend) {
+                try {
+                    coleccionUsuarios.document(usuario.uid)
+                        .set(usuario)
+                        .await()
+                    Log.d("REPO_SYNC", "✅ Usuario registrado directamente en Firebase Firestore (fallback): $emailLimpio")
+                } catch (e: Exception) {
+                    Log.w("REPO_SYNC", "⚠️ Firebase no disponible o sin conexión (${e.message})")
+                }
             }
 
             // 3. Cache local Room / SQLite
             usuarioDao.guardarUsuario(usuario)
             val usuarioEntity = UsuarioEntity(
-                correo = usuario.email.trim().lowercase(),
-                dni = usuario.dni,
+                correo = emailLimpio,
+                dni = dniLimpio,
                 nombreCompleto = usuario.fullName,
                 genero = usuario.gender,
                 telefono = usuario.phoneNumber,
@@ -189,7 +199,9 @@ class UsuarioRepositoryImpl(
                     genero = usuario.gender,
                     distrito = usuario.district,
                     urbanizacion = usuario.neighborhood,
-                    contrasena = usuario.password.ifBlank { usuario.contrasena }
+                    contrasena = usuario.password.ifBlank { usuario.contrasena },
+                    fotoPerfil = usuario.profilePhotoUrl,
+                    profilePhotoUrl = usuario.profilePhotoUrl
                 )
                 RetrofitClient.instance.updateProfile(apiReq)
                 Log.d("REPO_SYNC", "✅ Backend Node.js actualizado: $emailLimpio")

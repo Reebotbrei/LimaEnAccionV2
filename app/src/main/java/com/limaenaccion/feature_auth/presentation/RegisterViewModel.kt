@@ -412,8 +412,9 @@ class RegisterViewModel @JvmOverloads constructor(
             urbanizacion = effectiveNeighborhood
         )
 
+        val newUid = UUID.randomUUID().toString()
         pendingFirebaseUser = Usuario(
-            uid = UUID.randomUUID().toString(),
+            uid = newUid,
             fullName = state.fullName.trim(),
             dni = state.dni,
             gender = state.gender?.name ?: "",
@@ -427,6 +428,7 @@ class RegisterViewModel @JvmOverloads constructor(
         )
 
         pendingRegisterRequest = RegisterRequest(
+            id = newUid,
             dni = state.dni,
             nombreCompleto = state.fullName.trim(),
             correo = state.email.trim().lowercase(),
@@ -492,15 +494,11 @@ class RegisterViewModel @JvmOverloads constructor(
         currentOtpCode = finalCode
         otpExpiresAt = System.currentTimeMillis() + 60_000L // 1 minuto (60 segundos)
 
-        // Simular mensaje SMS entrante en el celular
-        val smsNotice = "SMS entrante: Tu código de activación de Lima en Acción es $finalCode (Válido 1 min)."
-        showSmsSystemNotification(getApplication(), phone, finalCode)
-
         _uiState.value = _uiState.value.copy(
             isLoading = false,
             generatedOtpCode = finalCode,
             otpExpiresAt = otpExpiresAt,
-            simulatedSmsNotice = smsNotice,
+            simulatedSmsNotice = null,
             registrationFinished = true
         )
     }
@@ -573,23 +571,15 @@ class RegisterViewModel @JvmOverloads constructor(
                 return@launch
             }
 
-            // Capa 1: Firebase Cloud Firestore
+            // Registrar en Backend y Firestore mediante el repositorio unificado
             try {
                 usuarioRepository.registrarUsuario(fbUser)
-                Log.d("REGISTER_FLOW", "✅ Usuario registrado en Firebase Firestore")
+                Log.d("REGISTER_FLOW", "✅ Usuario registrado en Backend y Firebase Firestore")
             } catch (e: Exception) {
-                Log.w("REGISTER_FLOW", "⚠️ Firebase no sincronizado (${e.message})")
+                Log.w("REGISTER_FLOW", "⚠️ Error al registrar usuario (${e.message})")
             }
 
-            // Capa 2: Backend Node.js REST API
-            try {
-                RetrofitClient.instance.registerUser(apiReq)
-                Log.d("REGISTER_FLOW", "✅ Usuario registrado en Backend Node.js")
-            } catch (e: Exception) {
-                Log.w("REGISTER_FLOW", "⚠️ Backend Node.js no disponible (${e.message})")
-            }
-
-            // Capa 3: SQLite Room nativo / cache local
+            // Guardar en SQLite Room local para sesión y soporte offline
             authLocalRepository.registerUser(localEntity)
             Log.d("REGISTER_FLOW", "✅ Usuario registrado en SQLite Room cache local")
 

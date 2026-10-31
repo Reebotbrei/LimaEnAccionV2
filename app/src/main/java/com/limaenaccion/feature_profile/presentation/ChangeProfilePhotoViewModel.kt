@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ChangeProfilePhotoUiState(
     val selectedAvatar: AvatarOption = SessionManager.currentAvatar.value,
@@ -56,7 +57,10 @@ class ChangeProfilePhotoViewModel @JvmOverloads constructor(
     }
 
     fun onSaveClicked() {
+        if (_uiState.value.isSaving) return
         val state = _uiState.value
+        _uiState.value = state.copy(isSaving = true)
+
         val photoString = if (state.customPhoto != null) {
             ImageCompressor.toBase64String(state.customPhoto)
         } else {
@@ -68,60 +72,68 @@ class ChangeProfilePhotoViewModel @JvmOverloads constructor(
             bitmap = state.customPhoto
         )
 
-        val currentUser = SessionManager.currentUser.value
-        if (currentUser != null) {
-            val updatedUser = currentUser.copy(fotoPerfil = photoString)
-            SessionManager.setCurrentUser(updatedUser)
-
-            viewModelScope.launch(Dispatchers.IO) {
-                // 1. SQLite Local (Room y SqliteOpenHelper - Rúbrica b)
-                try {
-                    usuarioDao.guardarUsuario(updatedUser)
-                    sqliteHelper.guardarUsuario(updatedUser)
-                    Log.d("PROFILE_PHOTO", "✅ Foto de perfil guardada en SQLite local")
-                } catch (e: Exception) {
-                    Log.e("PROFILE_PHOTO", "Error guardando foto en SQLite: ${e.message}")
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                var currentUser = SessionManager.currentUser.value
+                if (currentUser == null) {
+                    currentUser = usuarioDao.obtenerUltimoUsuarioRegistrado()
                 }
 
-                // 2. Firebase Cloud Firestore (Nube de Google)
-                try {
-                    val fbUser = Usuario(
-                        uid = updatedUser.correo,
-                        fullName = updatedUser.nombreCompleto,
-                        dni = updatedUser.dni,
-                        gender = updatedUser.genero,
-                        email = updatedUser.correo,
-                        phoneNumber = updatedUser.telefono,
-                        district = updatedUser.distrito,
-                        neighborhood = updatedUser.urbanizacion,
-                        profilePhotoUrl = photoString
-                    )
-                    usuarioRepository.actualizarUsuario(fbUser)
-                    Log.d("PROFILE_PHOTO", "✅ Foto de perfil guardada en Firebase Firestore")
-                } catch (e: Exception) {
-                    Log.w("PROFILE_PHOTO", "Error guardando foto en Firestore: ${e.message}")
-                }
+                if (currentUser != null) {
+                    val updatedUser = currentUser.copy(fotoPerfil = photoString)
+                    SessionManager.setCurrentUser(updatedUser)
 
-                // 3. Azure Backend API (Rúbrica c)
-                try {
-                    RetrofitClient.instance.updateProfile(
-                        RegisterRequest(
-                            email = updatedUser.correo,
-                            correo = updatedUser.correo,
-                            dni = updatedUser.dni,
+                    // 1. SQLite Local (Room y SqliteOpenHelper - Rúbrica b)
+                    try {
+                        usuarioDao.guardarUsuario(updatedUser)
+                        sqliteHelper.guardarUsuario(updatedUser)
+                        Log.d("PROFILE_PHOTO", "✅ Foto de perfil guardada en SQLite local")
+                    } catch (e: Exception) {
+                        Log.e("PROFILE_PHOTO", "Error guardando foto en SQLite: ${e.message}")
+                    }
+
+                    // 2. Firebase Cloud Firestore y Backend Node.js
+                    try {
+                        val fbUser = Usuario(
+                            uid = updatedUser.correo,
                             fullName = updatedUser.nombreCompleto,
-                            nombreCompleto = updatedUser.nombreCompleto,
-                            fotoPerfil = photoString,
+                            dni = updatedUser.dni,
+                            gender = updatedUser.genero,
+                            email = updatedUser.correo,
+                            phoneNumber = updatedUser.telefono,
+                            district = updatedUser.distrito,
+                            neighborhood = updatedUser.urbanizacion,
                             profilePhotoUrl = photoString
                         )
-                    )
-                    Log.d("PROFILE_PHOTO", "✅ Foto de perfil guardada en Backend Azure")
-                } catch (e: Exception) {
-                    Log.w("PROFILE_PHOTO", "Error guardando foto en Backend Azure: ${e.message}")
+                        usuarioRepository.actualizarUsuario(fbUser)
+                        Log.d("PROFILE_PHOTO", "✅ Foto de perfil sincronizada con Firebase y Backend")
+                    } catch (e: Exception) {
+                        Log.w("PROFILE_PHOTO", "Error guardando foto en Firestore: ${e.message}")
+                    }
+
+                    // 3. Fallback directo al Backend Node.js / Azure
+                    try {
+                        RetrofitClient.instance.updateProfile(
+                            RegisterRequest(
+                                id = updatedUser.correo,
+                                email = updatedUser.correo,
+                                correo = updatedUser.correo,
+                                dni = updatedUser.dni,
+                                fullName = updatedUser.nombreCompleto,
+                                nombreCompleto = updatedUser.nombreCompleto,
+                                fotoPerfil = photoString,
+                                profilePhotoUrl = photoString
+                            )
+                        )
+                        Log.d("PROFILE_PHOTO", "✅ Foto de perfil guardada en Backend Azure")
+                    } catch (e: Exception) {
+                        Log.w("PROFILE_PHOTO", "Error guardando foto en Backend Azure: ${e.message}")
+                    }
                 }
             }
-        }
 
-        _uiState.value = state.copy(savedPhoto = true)
+            // Esperar que termine el guardado antes de avisar a la UI para volver atrás
+            _uiState.value = _uiState.value.copy(savedPhoto = true, isSaving = false)
+        }
     }
 }

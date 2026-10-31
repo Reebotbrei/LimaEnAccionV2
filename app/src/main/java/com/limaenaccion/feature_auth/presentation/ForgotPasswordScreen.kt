@@ -179,9 +179,9 @@ private fun ValidateCodeDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // Casillas de 6 dígitos
+                // Casillas amplias de 6 dígitos con diseño moderno y centrado
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth(),
@@ -200,23 +200,30 @@ private fun ValidateCodeDialog(
                                 }
                             },
                             singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
                             textStyle = TextStyle(
                                 textAlign = TextAlign.Center,
-                                fontSize = 18.sp,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold
                             ),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                            ),
                             isError = codeError != null,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(56.dp)
+                                .height(64.dp)
                                 .focusRequester(focusRequesters[index])
                         )
                     }
                 }
 
                 if (codeError != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         codeError,
                         color = if (codeError.contains("enviado")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
@@ -225,7 +232,7 @@ private fun ValidateCodeDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "¿No recibiste el correo? ",
@@ -241,7 +248,7 @@ private fun ValidateCodeDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 PrimaryButton(
                     text = if (isVerifying) "Verificando..." else "Verificar y Continuar",
                     onClick = onVerifyClick,

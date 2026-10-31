@@ -36,9 +36,9 @@ import com.limaenaccion.core.data.session.AvatarOption
 import com.limaenaccion.core.ui.components.PrimaryButton
 
 val avatarColors = mapOf(
-    AvatarOption.DEFAULT to Color(0xFF8B5CF6),
+    AvatarOption.DEFAULT to Color(0xFF64748B),
     AvatarOption.AVATAR_1 to Color(0xFF8B5CF6),
-    AvatarOption.AVATAR_2 to Color(0xFF6366F1),
+    AvatarOption.AVATAR_2 to Color(0xFF3B82F6),
     AvatarOption.AVATAR_3 to Color(0xFFEC4899)
 )
 
@@ -83,7 +83,8 @@ fun ChangeProfilePhotoScreen(
         },
         bottomBar = {
             PrimaryButton(
-                text = "Guardar foto",
+                text = if (uiState.isSaving) "Guardando foto..." else "Guardar foto",
+                enabled = !uiState.isSaving,
                 onClick = viewModel::onSaveClicked,
                 modifier = Modifier.padding(16.dp)
             )

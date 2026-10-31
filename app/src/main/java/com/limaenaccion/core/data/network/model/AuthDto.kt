@@ -39,6 +39,9 @@ data class ContactoDto(
 )
 
 data class RegisterRequest(
+    @SerializedName("id", alternate = ["uid"])
+    val id: String = "",
+
     @SerializedName("nombreCompleto", alternate = ["fullName"])
     val nombreCompleto: String = "",
 
@@ -69,8 +72,9 @@ data class RegisterRequest(
     @SerializedName("contactosAuxilio")
     val contactosAuxilio: List<ContactoDto> = emptyList()
 ) {
-    // Constructor para soportar llamadas con parámetros en inglés
+    // Constructor para soportar llamadas con parámetros en inglés o sin id explícito
     constructor(
+        id: String = "",
         fullName: String = "",
         dni: String = "",
         gender: String = "",
@@ -90,6 +94,7 @@ data class RegisterRequest(
         distrito: String = district,
         urbanizacion: String = neighborhood
     ) : this(
+        id = id,
         nombreCompleto = nombreCompleto.ifBlank { fullName },
         dni = dni,
         genero = genero.ifBlank { gender },

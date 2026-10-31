@@ -13,7 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MarkEmailRead
-import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,7 +63,7 @@ fun SmsVerificationScreen(
                 title = {
                     Column {
                         Text("Verificación de Seguridad")
-                        Text("Activación de Cuenta", style = MaterialTheme.typography.labelSmall)
+                        Text("Activación por Correo", style = MaterialTheme.typography.labelSmall)
                     }
                 },
                 navigationIcon = {
@@ -86,71 +85,52 @@ fun SmsVerificationScreen(
                 .padding(paddingValues)
                 .imePadding()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Banner de SMS celular simulado en pantalla
-            if (!simulatedSmsNotice.isNullOrBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Filled.Sms,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "SMS Recibido en tu Celular",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = simulatedSmsNotice,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(8.dp))
 
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(68.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.MarkEmailRead, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
+                Icon(
+                    Icons.Filled.MarkEmailRead,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(34.dp)
+                )
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text("Verifica tu Identidad", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(6.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
-                text = "Hemos enviado un código de 6 dígitos a tu celular $phoneNumber ${if (email.isNotBlank()) "y a tu correo Gmail $email" else ""}.\n\nVálido durante 1 minuto (60 segundos).",
+                "Verifica tu Correo",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Hemos enviado un código de seguridad de 6 dígitos a:\n$email\n\n(Revisa tu bandeja de entrada o spam. Válido por 1 minuto)",
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(20.dp))
 
-            // Casillas de 6 dígitos
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Casillas amplias de 6 dígitos con diseño moderno y centrado
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 4.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
             ) {
                 uiState.codeDigits.forEachIndexed { index, digit ->
                     OutlinedTextField(
@@ -165,20 +145,32 @@ fun SmsVerificationScreen(
                             }
                         },
                         singleLine = true,
-                        textStyle = TextStyle(textAlign = TextAlign.Center, fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = TextStyle(
+                            textAlign = TextAlign.Center,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                        ),
                         isError = uiState.codeError != null,
                         modifier = Modifier
-                            .size(48.dp)
+                            .weight(1f)
+                            .height(64.dp)
                             .focusRequester(focusRequesters[index])
                     )
                 }
             }
 
             if (uiState.codeError != null) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth()
@@ -189,15 +181,20 @@ fun SmsVerificationScreen(
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(8.dp)
+                        modifier = Modifier.padding(10.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
+
             if (uiState.canResend) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("¿No recibiste el código? ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "¿No recibiste el correo? ",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Text(
                         "Reenviar código",
                         color = MaterialTheme.colorScheme.primary,
@@ -224,7 +221,7 @@ fun SmsVerificationScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             // Botón Principal responsivo dentro del scroll
             PrimaryButton(
@@ -261,7 +258,7 @@ fun SmsVerificationScreen(
 
             // Enlaces para corregir datos o cancelar
             Text(
-                text = "Modificar datos o corregir celular",
+                text = "Modificar datos o corregir correo",
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.bodyMedium,
