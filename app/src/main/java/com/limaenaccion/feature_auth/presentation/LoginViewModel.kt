@@ -162,7 +162,7 @@ class LoginViewModel @JvmOverloads constructor(
             // ── 1. Intentar con el API Service de Node.js (Requerimiento c) ──
             var servidorNodeRespondio = false
             try {
-                val response = RetrofitClient.instance.login(
+                val response = RetrofitClient.instance.loginUser(
                     LoginRequest(
                         email = state.email.trim(),
                         password = state.password

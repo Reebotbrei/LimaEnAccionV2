@@ -38,17 +38,9 @@ interface ApiService {
     // Requerimiento (c): Registro de usuario consumiendo API Service (Node.js)
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
     @POST("/api/v1/auth/register")
-    suspend fun register(@Body request: RegisterRequest): AuthResponse
-
-    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
-    @POST("/api/v1/auth/register")
     suspend fun registerUser(@Body request: RegisterRequest): AuthResponse
 
     // Requerimiento (c): Inicio de sesión consumiendo API Service (Node.js)
-    @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
-    @POST("/api/v1/auth/login")
-    suspend fun login(@Body request: LoginRequest): AuthResponse
-
     @Headers("x-api-key: LIMA_EN_ACCION_API_KEY_2026")
     @POST("/api/v1/auth/login")
     suspend fun loginUser(@Body request: LoginRequest): AuthResponse
