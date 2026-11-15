@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.ContactPhone
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,6 +24,7 @@ import com.limaenaccion.core.ui.components.MenuRow
 import com.limaenaccion.core.ui.components.SettingSegmentedRow
 import com.limaenaccion.core.ui.components.SettingSliderRow
 import com.limaenaccion.core.ui.components.SettingSwitchRow
+import com.limaenaccion.core.ui.components.TermsAndConditionsSheet
 import com.limaenaccion.core.util.LocalAppStrings
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -289,7 +291,17 @@ fun SettingsScreen(
         InfoRow(strings.registeredZoneLabel, uiState.registeredZone)
         InfoRow(strings.appVersionLabel, uiState.appVersion)
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Términos y Condiciones y Privacidad
+        MenuRow(
+            icon = Icons.Filled.Gavel,
+            title = "Términos y Condiciones de Uso",
+            subtitle = "Políticas de privacidad y normas cívicas de la comunidad",
+            onClick = viewModel::onShowTermsClicked
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
         DangerButton(
             text = strings.logoutBtn,
             onClick = viewModel::onLogoutClicked
@@ -352,6 +364,14 @@ fun SettingsScreen(
                 }
             },
             dismissButton = { TextButton(onClick = viewModel::onDismissDeleteAccountDialog) { Text(strings.cancelBtn) } }
+        )
+    }
+
+    // Modal BottomSheet de Términos y Condiciones
+    if (uiState.showTermsSheet) {
+        TermsAndConditionsSheet(
+            onDismissRequest = viewModel::onDismissTermsSheet,
+            acceptButtonText = "Entendido"
         )
     }
 }

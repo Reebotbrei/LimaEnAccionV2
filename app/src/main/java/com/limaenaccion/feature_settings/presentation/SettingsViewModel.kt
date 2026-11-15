@@ -61,7 +61,8 @@ data class SettingsUiState(
     // Diálogos de confirmación
     val showLogoutDialog: Boolean = false,
     val showDeleteAccountDialog: Boolean = false,
-    val showClearCacheDialog: Boolean = false
+    val showClearCacheDialog: Boolean = false,
+    val showTermsSheet: Boolean = false
 )
 
 class SettingsViewModel @JvmOverloads constructor(
@@ -317,5 +318,13 @@ class SettingsViewModel @JvmOverloads constructor(
                 onAccountDeleted()
             }
         }
+    }
+
+    fun onShowTermsClicked() {
+        _uiState.value = _uiState.value.copy(showTermsSheet = true)
+    }
+
+    fun onDismissTermsSheet() {
+        _uiState.value = _uiState.value.copy(showTermsSheet = false)
     }
 }

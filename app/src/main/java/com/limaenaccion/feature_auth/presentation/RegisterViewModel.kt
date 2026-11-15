@@ -79,6 +79,9 @@ data class RegisterUiState(
     val step2Completed: Boolean = false,
     val registrationFinished: Boolean = false,
 
+    // Términos y Condiciones
+    val termsAccepted: Boolean = false,
+
     // Datos OTP Pre-Registro
     val generatedOtpCode: String? = null,
     val otpExpiresAt: Long = 0L,
@@ -644,6 +647,10 @@ class RegisterViewModel @JvmOverloads constructor(
     }
 
     // Métodos heredados por compatibilidad
+    fun onTermsAcceptedChange(accepted: Boolean) {
+        _uiState.value = _uiState.value.copy(termsAccepted = accepted)
+    }
+
     fun onStep1ContinueClicked() { onRegisterSubmitClicked() }
     fun onStep2ContinueClicked() { onRegisterSubmitClicked() }
     fun onFinishRegistrationClicked() { onRegisterSubmitClicked() }

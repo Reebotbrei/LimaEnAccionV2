@@ -21,8 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import com.limaenaccion.core.ui.components.DropdownField
 import com.limaenaccion.core.ui.components.PrimaryButton
+import com.limaenaccion.core.ui.components.TermsAndConditionsSheet
 import com.limaenaccion.core.util.LimaLocations
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +41,7 @@ fun RegisterStep3Screen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    var showTermsSheet by remember { mutableStateOf(false) }
 
     // Solicitud de permisos para sugerencia de ubicación por GPS
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -73,11 +80,60 @@ fun RegisterStep3Screen(
             )
         },
         bottomBar = {
-            PrimaryButton(
-                text = "Finalizar Registro",
-                onClick = viewModel::onFinishRegistrationClicked,
-                modifier = Modifier.padding(16.dp)
-            )
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    // Checkbox de Aceptación de Términos y Condiciones
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = uiState.termsAccepted,
+                            onCheckedChange = viewModel::onTermsAcceptedChange,
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = buildAnnotatedString {
+                                append("He leído y acepto los ")
+                                withStyle(
+                                    SpanStyle(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
+                                        textDecoration = TextDecoration.Underline
+                                    )
+                                ) {
+                                    append("Términos y Condiciones")
+                                }
+                                append(" de la red vecinal.")
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.clickable { showTermsSheet = true }
+                        )
+                    }
+
+                    val canFinish = uiState.termsAccepted &&
+                            !uiState.district.isNullOrBlank() &&
+                            (!uiState.neighborhood.isNullOrBlank() || (uiState.isCustomNeighborhood && uiState.customNeighborhoodText.isNotBlank()))
+
+                    PrimaryButton(
+                        text = "Finalizar Registro",
+                        onClick = viewModel::onFinishRegistrationClicked,
+                        enabled = canFinish
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -236,6 +292,15 @@ fun RegisterStep3Screen(
                     }
                 }
             }
+        }
+
+        // Modal BottomSheet de Términos y Condiciones
+        if (showTermsSheet) {
+            TermsAndConditionsSheet(
+                onDismissRequest = { showTermsSheet = false },
+                onAcceptClicked = { viewModel.onTermsAcceptedChange(true) },
+                acceptButtonText = "Aceptar y Continuar"
+            )
         }
     }
 }
