@@ -159,5 +159,27 @@ module.exports = {
     obtenerPorId: (id) => {
         const reportes = leerReportesDesdeDisco();
         return reportes.find(r => r.id === id);
+    },
+
+    actualizar: async (id, datosActualizados) => {
+        const reportes = leerReportesDesdeDisco();
+        const index = reportes.findIndex(r => r.id === id);
+        if (index === -1) return null;
+
+        reportes[index] = { ...reportes[index], ...datosActualizados, id };
+        guardarReportesEnDisco(reportes);
+        console.log(`[REPORTES STORE] ✏️ Reporte ${id} actualizado en disco`);
+        return reportes[index];
+    },
+
+    eliminar: async (id) => {
+        const reportes = leerReportesDesdeDisco();
+        const index = reportes.findIndex(r => r.id === id);
+        if (index === -1) return false;
+
+        reportes.splice(index, 1);
+        guardarReportesEnDisco(reportes);
+        console.log(`[REPORTES STORE] 🗑️ Reporte ${id} eliminado de disco`);
+        return true;
     }
 };

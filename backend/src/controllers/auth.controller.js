@@ -272,13 +272,13 @@ async function actualizar(req, res) {
 }
 
 /**
- * POST /api/v1/auth/delete
+ * DELETE /api/v1/auth/account (o POST /delete por compatibilidad)
  */
 async function eliminarCuenta(req, res) {
     try {
         const body = req.body || {};
-        const correo = (body.email || body.correo || '').trim().toLowerCase();
-        const dni = String(body.dni || '').trim();
+        const correo = (req.params.clave || req.query.email || body.email || body.correo || '').trim().toLowerCase();
+        const dni = String(req.query.dni || body.dni || '').trim();
         const clave = correo || dni;
 
         if (!clave) {

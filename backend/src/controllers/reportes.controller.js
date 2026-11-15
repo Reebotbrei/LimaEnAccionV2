@@ -77,3 +77,57 @@ exports.crearReporte = async (req, res) => {
         });
     }
 };
+
+// PUT /api/v1/reportes/:id - Actualizar reporte existente
+exports.actualizarReporte = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const datos = req.body || {};
+
+        const actualizado = await reportesStore.actualizar(id, datos);
+        if (!actualizado) {
+            return res.status(404).json({
+                status: "error",
+                message: `Reporte con ID ${id} no encontrado`
+            });
+        }
+
+        res.status(200).json({
+            status: "success",
+            message: "Reporte actualizado correctamente",
+            data: actualizado
+        });
+    } catch (error) {
+        console.error("[BACKEND ERROR] Error al actualizar reporte:", error.message);
+        res.status(500).json({
+            status: "error",
+            message: "Error al actualizar reporte: " + error.message
+        });
+    }
+};
+
+// DELETE /api/v1/reportes/:id - Eliminar reporte
+exports.eliminarReporte = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const eliminado = await reportesStore.eliminar(id);
+        if (!eliminado) {
+            return res.status(404).json({
+                status: "error",
+                message: `Reporte con ID ${id} no encontrado`
+            });
+        }
+
+        res.status(200).json({
+            status: "success",
+            message: "Reporte eliminado exitosamente"
+        });
+    } catch (error) {
+        console.error("[BACKEND ERROR] Error al eliminar reporte:", error.message);
+        res.status(500).json({
+            status: "error",
+            message: "Error al eliminar reporte: " + error.message
+        });
+    }
+};
