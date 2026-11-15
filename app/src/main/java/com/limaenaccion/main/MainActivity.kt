@@ -37,6 +37,13 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        // Inicialización segura del motor de Google Maps para evitar NPEs en tiempo de ejecución
+        try {
+            com.google.android.gms.maps.MapsInitializer.initialize(applicationContext)
+        } catch (e: Exception) {
+            Log.w("MAPS_INIT", "Aviso al inicializar MapsInitializer: ${e.message}")
+        }
+
         // Detección y adaptación automática de IP en segundo plano al arrancar la app
         lifecycleScope.launch {
             val prefs = PreferencesRepositoryImpl(applicationContext)

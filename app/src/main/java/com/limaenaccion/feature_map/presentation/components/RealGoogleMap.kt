@@ -33,11 +33,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -49,7 +49,7 @@ import com.limaenaccion.feature_alerts.data.model.IncidentType
 import kotlinx.coroutines.launch
 
 /**
- * Componente oficial de Google Maps para Jetpack Compose.
+ * Componente oficial de Google Maps para Jetpack Compose con protección robusta contra fallos.
  * Conectado en arquitectura MVVM + Clean Architecture / MVI al flujo de reportes en tiempo real.
  */
 @Composable
@@ -65,79 +65,108 @@ fun RealGoogleMap(
 
     val defaultLatLng = remember { LatLng(defaultLatitude, defaultLongitude) }
     var userLatLng by remember { mutableStateOf(defaultLatLng) }
-    var hasExactGps by remember { mutableStateOf(false) }
     var hasCenteredOnUser by remember { mutableStateOf(false) }
+    var isMapLoaded by remember { mutableStateOf(false) }
 
-    var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+    // Verificación segura de permisos
+    fun checkHasFine(): Boolean = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    fun checkHasCoarse(): Boolean = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    var hasFinePermission by remember { mutableStateOf(checkHasFine()) }
+    var hasCoarsePermission by remember { mutableStateOf(checkHasCoarse()) }
+    val hasAnyLocationPermission = hasFinePermission || hasCoarsePermission
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(defaultLatLng, 15.5f)
     }
 
-    // Cache de íconos BitmapDescriptor para rendimiento óptimo
-    val markerIcons = remember(context) {
-        IncidentType.entries.associateWith { type ->
-            createIncidentBitmapDescriptor(context, type)
+    // Inicializar Google Maps Renderer de forma segura
+    LaunchedEffect(Unit) {
+        try {
+            MapsInitializer.initialize(context, MapsInitializer.Renderer.LATEST) {
+                Log.d("GOOGLE_MAPS", "MapsInitializer completado con renderer LATEST")
+            }
+        } catch (_: Exception) {
+            try {
+                MapsInitializer.initialize(context)
+            } catch (e: Exception) {
+                Log.w("GOOGLE_MAPS", "Aviso MapsInitializer: ${e.message}")
+            }
         }
     }
-    val userPinIcon = remember(context) {
-        createUserPinBitmapDescriptor(context)
+
+    // Cache dinámico de íconos seguros (se calculan o recalculan sin provocar NPE)
+    var markerIcons by remember { mutableStateOf<Map<IncidentType, BitmapDescriptor>>(emptyMap()) }
+    var userPinIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+
+    // Generar iconos una vez inicializado el entorno de Maps
+    LaunchedEffect(isMapLoaded) {
+        try {
+            markerIcons = IncidentType.entries.mapNotNull { type ->
+                createIncidentBitmapDescriptor(context, type)?.let { icon -> type to icon }
+            }.toMap()
+            userPinIcon = createUserPinBitmapDescriptor(context)
+        } catch (e: Exception) {
+            Log.w("GOOGLE_MAPS", "Aviso al precargar iconos de marcadores: ${e.message}")
+        }
     }
 
     // Función para obtener la ubicación real con FusedLocation / LocationManager
     @SuppressLint("MissingPermission")
     fun updateLocationFromDevice(forceAnimate: Boolean = false) {
-        if (!hasLocationPermission) return
+        if (!checkHasFine() && !checkHasCoarse()) return
 
         try {
             val fusedClient = LocationServices.getFusedLocationProviderClient(context)
             fusedClient.lastLocation.addOnSuccessListener { loc: Location? ->
-                if (loc != null) {
+                if (loc != null && loc.latitude != 0.0 && loc.longitude != 0.0) {
                     val pt = LatLng(loc.latitude, loc.longitude)
                     userLatLng = pt
-                    hasExactGps = true
                     if (!hasCenteredOnUser || forceAnimate) {
                         hasCenteredOnUser = true
                         coroutineScope.launch {
-                            cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
-                                800
-                            )
+                            try {
+                                cameraPositionState.animate(
+                                    CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
+                                    800
+                                )
+                            } catch (_: Exception) {}
                         }
                     }
                 }
             }.addOnFailureListener {
                 // Fallback a LocationManager clásico
-                val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-                val lastGps = lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                val lastNet = lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                val best = when {
-                    lastGps != null && lastNet != null -> if (lastGps.time >= lastNet.time) lastGps else lastNet
-                    lastGps != null -> lastGps
-                    else -> lastNet
-                }
-                if (best != null) {
-                    val pt = LatLng(best.latitude, best.longitude)
-                    userLatLng = pt
-                    hasExactGps = true
-                    if (!hasCenteredOnUser || forceAnimate) {
-                        hasCenteredOnUser = true
-                        coroutineScope.launch {
-                            cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
-                                800
-                            )
+                try {
+                    val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                    val lastGps = if (checkHasFine()) lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER) else null
+                    val lastNet = if (checkHasCoarse() || checkHasFine()) lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) else null
+                    val best = when {
+                        lastGps != null && lastNet != null -> if (lastGps.time >= lastNet.time) lastGps else lastNet
+                        lastGps != null -> lastGps
+                        else -> lastNet
+                    }
+                    if (best != null && best.latitude != 0.0 && best.longitude != 0.0) {
+                        val pt = LatLng(best.latitude, best.longitude)
+                        userLatLng = pt
+                        if (!hasCenteredOnUser || forceAnimate) {
+                            hasCenteredOnUser = true
+                            coroutineScope.launch {
+                                try {
+                                    cameraPositionState.animate(
+                                        CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
+                                        800
+                                    )
+                                } catch (_: Exception) {}
+                            }
                         }
                     }
+                } catch (err: Exception) {
+                    Log.w("GOOGLE_MAPS", "Error en fallback LocationManager: ${err.message}")
                 }
             }
 
@@ -145,16 +174,19 @@ fun RealGoogleMap(
             val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             val listener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
-                    val pt = LatLng(location.latitude, location.longitude)
-                    userLatLng = pt
-                    hasExactGps = true
-                    if (!hasCenteredOnUser) {
-                        hasCenteredOnUser = true
-                        coroutineScope.launch {
-                            cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
-                                800
-                            )
+                    if (location.latitude != 0.0 && location.longitude != 0.0) {
+                        val pt = LatLng(location.latitude, location.longitude)
+                        userLatLng = pt
+                        if (!hasCenteredOnUser) {
+                            hasCenteredOnUser = true
+                            coroutineScope.launch {
+                                try {
+                                    cameraPositionState.animate(
+                                        CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
+                                        800
+                                    )
+                                } catch (_: Exception) {}
+                            }
                         }
                     }
                 }
@@ -163,26 +195,32 @@ fun RealGoogleMap(
                 override fun onProviderEnabled(provider: String) {}
                 override fun onProviderDisabled(provider: String) {}
             }
-            lm?.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 5f, listener)
-            lm?.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 5f, listener)
+
+            if (checkHasFine()) {
+                lm?.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 5f, listener)
+            }
+            if (checkHasCoarse() || checkHasFine()) {
+                lm?.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 5f, listener)
+            }
         } catch (e: Exception) {
-            Log.w("GOOGLE_MAPS", "Error obteniendo ubicación: ${e.message}")
+            Log.w("GOOGLE_MAPS", "Error obteniendo ubicación GPS: ${e.message}")
         }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        hasLocationPermission = granted
-        if (granted) {
+        hasFinePermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        hasCoarsePermission = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (hasFinePermission || hasCoarsePermission) {
             updateLocationFromDevice(forceAnimate = true)
         }
     }
 
     LaunchedEffect(Unit) {
-        if (hasLocationPermission) {
+        if (checkHasFine() || checkHasCoarse()) {
+            hasFinePermission = checkHasFine()
+            hasCoarsePermission = checkHasCoarse()
             updateLocationFromDevice()
         } else {
             permissionLauncher.launch(
@@ -194,18 +232,19 @@ fun RealGoogleMap(
         }
     }
 
-    val uiSettings = remember(hasLocationPermission) {
+    val uiSettings = remember {
         MapUiSettings(
             zoomControlsEnabled = false,
-            myLocationButtonEnabled = false, // Usamos nuestro botón flotante estilizado
+            myLocationButtonEnabled = false,
             compassEnabled = true,
             mapToolbarEnabled = false
         )
     }
 
-    val mapProperties = remember(hasLocationPermission) {
+    // Solo habilitar isMyLocationEnabled si el permiso está explícitamente confirmado
+    val mapProperties = remember(hasAnyLocationPermission) {
         MapProperties(
-            isMyLocationEnabled = hasLocationPermission
+            isMyLocationEnabled = hasAnyLocationPermission
         )
     }
 
@@ -214,10 +253,13 @@ fun RealGoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = mapProperties,
-            uiSettings = uiSettings
+            uiSettings = uiSettings,
+            onMapLoaded = {
+                isMapLoaded = true
+            }
         ) {
-            // 1. PIN de ubicación del usuario (solo si el servicio nativo de punto azul no estuviese disponible)
-            if (!hasLocationPermission) {
+            // 1. PIN de respaldo si la capa nativa azul no está disponible
+            if (!hasAnyLocationPermission) {
                 Marker(
                     state = rememberMarkerState(position = userLatLng),
                     title = "📍 Tu ubicación seleccionada",
@@ -228,19 +270,21 @@ fun RealGoogleMap(
 
             // 2. Marcadores de los reportes en tiempo real de Firebase Firestore
             incidents.forEach { incident ->
-                val pos = LatLng(incident.latitude, incident.longitude)
-                val icon = markerIcons[incident.type] ?: userPinIcon
+                if (incident.latitude != 0.0 && incident.longitude != 0.0) {
+                    val pos = LatLng(incident.latitude, incident.longitude)
+                    val icon = markerIcons[incident.type] ?: userPinIcon
 
-                Marker(
-                    state = rememberMarkerState(key = incident.id, position = pos),
-                    title = incident.title,
-                    snippet = incident.description,
-                    icon = icon,
-                    onClick = {
-                        onPinClick(incident.id)
-                        true // Consumir evento para desplegar el BottomSheet en DashboardScreen
-                    }
-                )
+                    Marker(
+                        state = rememberMarkerState(key = incident.id, position = pos),
+                        title = incident.title,
+                        snippet = incident.description,
+                        icon = icon,
+                        onClick = {
+                            onPinClick(incident.id)
+                            true
+                        }
+                    )
+                }
             }
         }
 
@@ -254,7 +298,9 @@ fun RealGoogleMap(
             SmallFloatingActionButton(
                 onClick = {
                     coroutineScope.launch {
-                        cameraPositionState.animate(CameraUpdateFactory.zoomIn(), 300)
+                        try {
+                            cameraPositionState.animate(CameraUpdateFactory.zoomIn(), 300)
+                        } catch (_: Exception) {}
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -268,7 +314,9 @@ fun RealGoogleMap(
             SmallFloatingActionButton(
                 onClick = {
                     coroutineScope.launch {
-                        cameraPositionState.animate(CameraUpdateFactory.zoomOut(), 300)
+                        try {
+                            cameraPositionState.animate(CameraUpdateFactory.zoomOut(), 300)
+                        } catch (_: Exception) {}
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -281,7 +329,7 @@ fun RealGoogleMap(
 
             FloatingActionButton(
                 onClick = {
-                    if (hasLocationPermission) {
+                    if (checkHasFine() || checkHasCoarse()) {
                         updateLocationFromDevice(forceAnimate = true)
                     } else {
                         permissionLauncher.launch(
@@ -304,73 +352,82 @@ fun RealGoogleMap(
 }
 
 /**
- * Genera el BitmapDescriptor para los pines de incidentes de Google Maps
- * con color por categoría y su respectivo emoji cívico.
+ * Genera el BitmapDescriptor para los pines de incidentes de Google Maps de forma segura contra NPE.
  */
-private fun createIncidentBitmapDescriptor(context: Context, incidentType: IncidentType): BitmapDescriptor {
-    val density = context.resources.displayMetrics.density
-    val sizePx = (38 * density).toInt()
-    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(bitmap)
+private fun createIncidentBitmapDescriptor(context: Context, incidentType: IncidentType): BitmapDescriptor? {
+    return try {
+        val density = context.resources.displayMetrics.density
+        val sizePx = (38 * density).toInt().coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
 
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    // Borde exterior blanco
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
+        // Borde exterior blanco
+        paint.color = android.graphics.Color.WHITE
+        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
 
-    // Círculo principal con color de la categoría
-    val colorArgb = when (incidentType) {
-        IncidentType.ROBO -> 0xFFDC2626.toInt()             // Rojo
-        IncidentType.INCENDIO -> 0xFFEA580C.toInt()         // Naranja
-        IncidentType.EMERGENCIA_MEDICA,
-        IncidentType.MEDICO -> 0xFF059669.toInt()           // Verde
-        IncidentType.ACCIDENTE -> 0xFFD97706.toInt()         // Ámbar
-        IncidentType.VANDALISMO -> 0xFF7C3AED.toInt()       // Púrpura
-        IncidentType.ACTIVIDAD_INUSUAL -> 0xFF2563EB.toInt() // Azul
+        // Círculo principal con color de la categoría
+        val colorArgb = when (incidentType) {
+            IncidentType.ROBO -> 0xFFDC2626.toInt()             // Rojo
+            IncidentType.INCENDIO -> 0xFFEA580C.toInt()         // Naranja
+            IncidentType.EMERGENCIA_MEDICA,
+            IncidentType.MEDICO -> 0xFF059669.toInt()           // Verde
+            IncidentType.ACCIDENTE -> 0xFFD97706.toInt()         // Ámbar
+            IncidentType.VANDALISMO -> 0xFF7C3AED.toInt()       // Púrpura
+            IncidentType.ACTIVIDAD_INUSUAL -> 0xFF2563EB.toInt() // Azul
+        }
+        paint.color = colorArgb
+        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (2.5f * density), paint)
+
+        // Emoji representativo en el centro
+        paint.color = android.graphics.Color.WHITE
+        paint.textSize = 17 * density
+        paint.textAlign = Paint.Align.CENTER
+        val emoji = when (incidentType) {
+            IncidentType.ROBO -> "⚠️"
+            IncidentType.INCENDIO -> "🔥"
+            IncidentType.EMERGENCIA_MEDICA,
+            IncidentType.MEDICO -> "🚑"
+            IncidentType.ACCIDENTE -> "🚗"
+            IncidentType.VANDALISMO -> "🔨"
+            IncidentType.ACTIVIDAD_INUSUAL -> "👁️"
+        }
+
+        val fontMetrics = paint.fontMetrics
+        val yOffset = (sizePx / 2f) - (fontMetrics.ascent + fontMetrics.descent) / 2f
+        canvas.drawText(emoji, sizePx / 2f, yOffset, paint)
+
+        BitmapDescriptorFactory.fromBitmap(bitmap)
+    } catch (e: Exception) {
+        Log.w("GOOGLE_MAPS", "No se pudo generar BitmapDescriptor para $incidentType: ${e.message}")
+        null
     }
-    paint.color = colorArgb
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (2.5f * density), paint)
-
-    // Emoji representativo en el centro
-    paint.color = android.graphics.Color.WHITE
-    paint.textSize = 17 * density
-    paint.textAlign = Paint.Align.CENTER
-    val emoji = when (incidentType) {
-        IncidentType.ROBO -> "⚠️"
-        IncidentType.INCENDIO -> "🔥"
-        IncidentType.EMERGENCIA_MEDICA,
-        IncidentType.MEDICO -> "🚑"
-        IncidentType.ACCIDENTE -> "🚗"
-        IncidentType.VANDALISMO -> "🔨"
-        IncidentType.ACTIVIDAD_INUSUAL -> "👁️"
-    }
-
-    val fontMetrics = paint.fontMetrics
-    val yOffset = (sizePx / 2f) - (fontMetrics.ascent + fontMetrics.descent) / 2f
-    canvas.drawText(emoji, sizePx / 2f, yOffset, paint)
-
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
 /**
- * Genera el BitmapDescriptor para el pin de usuario
+ * Genera el BitmapDescriptor para el pin de usuario de forma segura contra NPE.
  */
-private fun createUserPinBitmapDescriptor(context: Context): BitmapDescriptor {
-    val density = context.resources.displayMetrics.density
-    val sizePx = (36 * density).toInt()
-    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(bitmap)
+private fun createUserPinBitmapDescriptor(context: Context): BitmapDescriptor? {
+    return try {
+        val density = context.resources.displayMetrics.density
+        val sizePx = (36 * density).toInt().coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
 
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.color = android.graphics.Color.WHITE
+        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
 
-    paint.color = 0xFF1D4ED8.toInt()
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (3 * density), paint)
+        paint.color = 0xFF1D4ED8.toInt()
+        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - (3 * density), paint)
 
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, 5 * density, paint)
+        paint.color = android.graphics.Color.WHITE
+        canvas.drawCircle(sizePx / 2f, sizePx / 2f, 5 * density, paint)
 
-    return BitmapDescriptorFactory.fromBitmap(bitmap)
+        BitmapDescriptorFactory.fromBitmap(bitmap)
+    } catch (e: Exception) {
+        Log.w("GOOGLE_MAPS", "No se pudo generar user pin bitmap: ${e.message}")
+        null
+    }
 }
