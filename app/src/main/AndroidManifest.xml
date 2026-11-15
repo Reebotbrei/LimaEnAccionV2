@@ -41,7 +41,7 @@
         <!-- Google Maps API Key oficial para Servicios de Mapas y Geolocalización -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key" />
+            android:value="AIzaSyBXsXR4azhzHnmdfRR19ZYVZA8Nkl6qjWE" />
     </application>
 
 </manifest>

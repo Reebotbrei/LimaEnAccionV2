@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">Lima en Accion</string>
-    <!-- Clave de API de Google Maps (Reemplazar con la clave generada en Google Cloud Console) -->
-    <string name="google_maps_key" translatable="false">TU_API_KEY_DE_GOOGLE_MAPS</string>
+    <!-- Clave de API de Google Maps oficial -->
+    <string name="google_maps_key" translatable="false">AIzaSyBXsXR4azhzHnmdfRR19ZYVZA8Nkl6qjWE</string>
 </resources>
