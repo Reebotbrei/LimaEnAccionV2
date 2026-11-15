@@ -89,11 +89,11 @@ fun RegisterStep3Screen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    // Checkbox de Aceptación de Términos y Condiciones
+                    // Checkbox de Aceptación Expresa de Términos y Condiciones
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 10.dp),
+                            .padding(bottom = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -114,9 +114,9 @@ fun RegisterStep3Screen(
                                         textDecoration = TextDecoration.Underline
                                     )
                                 ) {
-                                    append("Términos y Condiciones")
+                                    append("Términos y Condiciones de Uso y la Política de Privacidad de Lima en Acción")
                                 }
-                                append(" de la red vecinal.")
+                                append(".")
                             },
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.clickable { showTermsSheet = true }

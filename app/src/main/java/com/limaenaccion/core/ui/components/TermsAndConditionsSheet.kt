@@ -131,10 +131,11 @@ fun TermsAndConditionsSheet(
                 TermsSection(
                     icon = Icons.Filled.LocationOn,
                     title = "3. Geolocalización y Privacidad (Ley N° 29733)",
-                    content = "En estricto cumplimiento de la Ley N° 29733 (Ley de Protección de Datos Personales del Perú):\n" +
-                            "• Tu ubicación GPS solo se consulta y transmite de forma activa cuando creas un reporte ciudadano o pulsas el botón SOS para enviar tu posición a tus contactos de auxilio.\n" +
-                            "• Garantía de Anonimato: Al publicar un incidente, puedes activar el switch 'Reporte Anónimo' para que tu nombre y apellido no sean visibles ante la red de vecinos.\n" +
-                            "• Tienes derecho en cualquier momento a solicitar la eliminación integral de tu cuenta y datos desde el menú de Ajustes.",
+                    content = "En estricto cumplimiento de la Ley N° 29733 (Ley de Protección de Datos Personales del Perú):\n\n" +
+                            "• Finalidad Exclusiva de Geolocalización: La geolocalización se utilizará exclusivamente para posicionar denuncias de seguridad urbana y emergencias en el mapa vecinal.\n\n" +
+                            "• Protección de Datos Sensibles: Los datos personales y sensibles no serán comercializados ni transferidos a terceros no autorizados bajo ninguna circunstancia.\n\n" +
+                            "• Garantía de Anonimato: Al publicar un incidente, puedes activar el switch 'Reporte Anónimo' para proteger tu identidad ante la comunidad.\n\n" +
+                            "• Ejercicio de Derechos ARCO: Tienes derecho en todo momento a acceder, rectificar y solicitar la eliminación integral de tu cuenta y datos desde el menú de Ajustes.",
                     cardColor = MaterialTheme.colorScheme.surface,
                     borderColor = MaterialTheme.colorScheme.outlineVariant
                 )
