@@ -20,11 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -34,6 +38,7 @@ import com.limaenaccion.core.ui.components.BrandLayout
 import com.limaenaccion.core.ui.components.LogoVariant
 import com.limaenaccion.core.ui.components.PrimaryButton
 import com.limaenaccion.core.ui.components.ServerConfigCard
+import com.limaenaccion.core.ui.components.TermsAndConditionsSheet
 import com.limaenaccion.core.util.LocalAppStrings
 import kotlinx.coroutines.delay
 
@@ -48,6 +53,7 @@ fun LoginScreen(
     val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
     val haptic = LocalHapticFeedback.current
+    var showTermsSheet by remember { mutableStateOf(false) }
 
     val logoInteractionSource = remember { MutableInteractionSource() }
     val isLogoPressed by logoInteractionSource.collectIsPressedAsState()
@@ -224,7 +230,43 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Checkbox de Aceptación Expresa de Términos y Condiciones
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = uiState.termsAccepted,
+                    onCheckedChange = viewModel::onTermsAcceptedChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = buildAnnotatedString {
+                        append("He leído y acepto los ")
+                        withStyle(
+                            SpanStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                textDecoration = TextDecoration.Underline
+                            )
+                        ) {
+                            append("Términos y Condiciones de Uso y la Política de Privacidad de Lima en Acción")
+                        }
+                        append(".")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.clickable { showTermsSheet = true }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             if (uiState.isLoading) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -240,7 +282,7 @@ fun LoginScreen(
                 PrimaryButton(
                     text = strings.loginSubmitBtn,
                     onClick = viewModel::onLoginClicked,
-                    enabled = !uiState.isLoading && !uiState.isLockedOut
+                    enabled = !uiState.isLoading && !uiState.isLockedOut && uiState.termsAccepted
                 )
             }
 
@@ -299,6 +341,18 @@ fun LoginScreen(
                     Text("NO", fontWeight = FontWeight.Bold)
                 }
             }
+        )
+    }
+
+    // Modal BottomSheet de Términos y Condiciones
+    if (showTermsSheet) {
+        TermsAndConditionsSheet(
+            onDismissRequest = { showTermsSheet = false },
+            onAcceptClicked = {
+                viewModel.onTermsAcceptedChange(true)
+                showTermsSheet = false
+            },
+            acceptButtonText = "Aceptar y Continuar"
         )
     }
 }

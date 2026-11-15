@@ -1,6 +1,10 @@
 package com.limaenaccion.feature_reports.presentation
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
@@ -22,9 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 
 @Composable
 fun CameraSimulationScreen(
@@ -32,6 +38,8 @@ fun CameraSimulationScreen(
     onClose: () -> Unit,
     onPhotoCaptured: () -> Unit
 ) {
+    val context = LocalContext.current
+
     // Launcher para abrir la cámara nativa del sistema
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
@@ -39,6 +47,37 @@ fun CameraSimulationScreen(
         if (bitmap != null) {
             viewModel.onPhotoCaptured(bitmap)
             onPhotoCaptured()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                cameraLauncher.launch()
+            } catch (e: Exception) {
+                Log.e("CAMERA_SCREEN", "Error al lanzar cámara: ${e.message}")
+                Toast.makeText(context, "No se pudo abrir la cámara.", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(context, "Se requiere permiso de cámara para tomar fotos.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun launchCameraSafely() {
+        val hasCamera = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasCamera) {
+            try {
+                cameraLauncher.launch()
+            } catch (e: Exception) {
+                Log.e("CAMERA_SCREEN", "Error al lanzar cámara: ${e.message}")
+                Toast.makeText(context, "No se pudo abrir la cámara.", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -90,7 +129,7 @@ fun CameraSimulationScreen(
 
             // Botón directo para disparar la cámara del sistema
             Button(
-                onClick = { cameraLauncher.launch() },
+                onClick = { launchCameraSafely() },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -117,14 +156,14 @@ fun CameraSimulationScreen(
                     .background(Color.White.copy(alpha = 0.2f))
                     .border(3.dp, Color.White, CircleShape)
                     .clickable {
-                        cameraLauncher.launch()
+                        launchCameraSafely()
                     },
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.White))
             }
 
-            CircleIconButton(icon = Icons.Filled.Cameraswitch, onClick = { cameraLauncher.launch() })
+            CircleIconButton(icon = Icons.Filled.Cameraswitch, onClick = { launchCameraSafely() })
         }
     }
 }
