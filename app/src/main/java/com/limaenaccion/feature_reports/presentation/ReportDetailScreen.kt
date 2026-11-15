@@ -1,5 +1,12 @@
 package com.limaenaccion.feature_reports.presentation
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -25,9 +32,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.limaenaccion.core.ui.components.PrimaryButton
 import com.limaenaccion.core.util.LocalAppStrings
 import com.limaenaccion.feature_reports.data.model.ReportTimeframe
@@ -44,8 +53,9 @@ fun ReportDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
-    // Lanzador directo a la cámara real de Android (sin pantallas intermedias)
+    // Lanzador directo a la cámara real de Android
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
@@ -57,6 +67,44 @@ fun ReportDetailsScreen(
     LaunchedEffect(Unit) {
         if (!uiState.isCustomLocation && !uiState.isGpsActive) {
             viewModel.fetchDeviceGpsLocation()
+        }
+    }
+
+    // Permiso de cámara en tiempo de ejecución
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                cameraLauncher.launch(null)
+            } catch (e: Exception) {
+                Log.e("REPORT_PHOTO", "Error abriendo cámara tras conceder permiso: ${e.message}")
+                android.widget.Toast.makeText(context, "No se pudo abrir la cámara. Puedes usar la Galería.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            android.widget.Toast.makeText(context, "Se requiere permiso de cámara para tomar fotos de evidencia.", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Selector de fotos desde la galería multimedia
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, _, _ ->
+                        decoder.isMutableRequired = true
+                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                }
+                viewModel.onPhotoCaptured(bitmap)
+            } catch (e: Exception) {
+                Log.e("REPORT_PHOTO", "Error cargando foto de galería: ${e.message}")
+            }
         }
     }
 
@@ -327,14 +375,44 @@ fun ReportDetailsScreen(
                     }
                 }
             } else {
-                OutlinedButton(
-                    onClick = { cameraLauncher.launch(null) },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(strings.reportAttachPhotoBtn)
+                    OutlinedButton(
+                        onClick = {
+                            val hasCamera = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                            if (hasCamera) {
+                                try {
+                                    cameraLauncher.launch(null)
+                                } catch (e: Exception) {
+                                    Log.e("REPORT_PHOTO", "Error abriendo cámara: ${e.message}")
+                                    android.widget.Toast.makeText(context, "No se pudo abrir la cámara. Puedes adjuntar desde la Galería.", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Cámara")
+                    }
+
+                    OutlinedButton(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Galería")
+                    }
                 }
             }
 

@@ -49,7 +49,10 @@ data class LoginUiState(
 
     // Diálogo flotante "¿Desea Recordar la sesión?" post-login
     val showRememberSessionDialog: Boolean = false,
-    val pendingUserUid: String? = null
+    val pendingUserUid: String? = null,
+
+    // Aceptación expresa de Términos y Condiciones
+    val termsAccepted: Boolean = false
 )
 
 class LoginViewModel @JvmOverloads constructor(
@@ -135,9 +138,13 @@ class LoginViewModel @JvmOverloads constructor(
         }
     }
 
+    fun onTermsAcceptedChange(accepted: Boolean) {
+        _uiState.value = _uiState.value.copy(termsAccepted = accepted)
+    }
+
     fun onLoginClicked() {
         val state = _uiState.value
-        if (state.isLoading || state.isLockedOut) return
+        if (state.isLoading || state.isLockedOut || !state.termsAccepted) return
 
         val emailError = when {
             state.email.isBlank() -> "Ingresa tu correo"
