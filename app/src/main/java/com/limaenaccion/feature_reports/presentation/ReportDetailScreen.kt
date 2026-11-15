@@ -54,6 +54,12 @@ fun ReportDetailsScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        if (!uiState.isCustomLocation && !uiState.isGpsActive) {
+            viewModel.fetchDeviceGpsLocation()
+        }
+    }
+
     LaunchedEffect(uiState.published) {
         if (uiState.published) onPublished()
     }

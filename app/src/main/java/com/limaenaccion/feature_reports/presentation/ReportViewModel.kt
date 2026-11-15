@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.limaenaccion.core.util.DeviceLocationProvider
 import com.limaenaccion.core.util.ImageCompressor
 import com.limaenaccion.feature_reports.data.model.ReportTimeframe
 import com.limaenaccion.feature_reports.data.model.ReportType
@@ -41,8 +42,8 @@ data class ReportUiState(
     val published: Boolean = false,
     val errorMessage: String? = null,
     val hasDraftSaved: Boolean = false,
-    val latitude: Double = -12.019542,
-    val longitude: Double = -77.014231,
+    val latitude: Double = DeviceLocationProvider.DEFAULT_LIMA_LAT,
+    val longitude: Double = DeviceLocationProvider.DEFAULT_LIMA_LNG,
     val isGpsActive: Boolean = false
 ) {
     val canPublish: Boolean get() = selectedType != null && location.isNotBlank()
@@ -63,75 +64,18 @@ class ReportViewModel @JvmOverloads constructor(
 
     fun fetchDeviceGpsLocation() {
         val app = getApplication<Application>()
-        val hasFine = ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val hasCoarse = ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-        if (hasFine || hasCoarse) {
+        viewModelScope.launch {
             try {
-                val lm = app.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-                val lastGps = lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                val lastNet = lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                val best: Location? = when {
-                    lastGps != null && lastNet != null -> if (lastGps.time >= lastNet.time) lastGps else lastNet
-                    lastGps != null -> lastGps
-                    else -> lastNet
-                }
-
-                if (best != null) {
-                    val lat = best.latitude
-                    val lng = best.longitude
-                    _uiState.value = _uiState.value.copy(
-                        latitude = lat,
-                        longitude = lng,
-                        isGpsActive = true
-                    )
-
-                    // Intentar obtener dirección legible por Geocoder en segundo plano
-                    viewModelScope.launch(Dispatchers.IO) {
-                        try {
-                            val geocoder = Geocoder(app, Locale.getDefault())
-                            val addresses = geocoder.getFromLocation(lat, lng, 1)
-                            if (!addresses.isNullOrEmpty()) {
-                                val addr = addresses[0]
-                                val calle = addr.thoroughfare ?: addr.featureName ?: ""
-                                val distrito = addr.subLocality ?: addr.locality ?: "San Juan de Lurigancho"
-                                val direccionFinal = if (calle.isNotBlank()) "$calle, $distrito" else distrito
-
-                                withContext(Dispatchers.Main) {
-                                    if (!_uiState.value.isCustomLocation) {
-                                        _uiState.value = _uiState.value.copy(location = direccionFinal)
-                                    }
-                                }
-                            } else {
-                                withContext(Dispatchers.Main) {
-                                    if (!_uiState.value.isCustomLocation) {
-                                        _uiState.value = _uiState.value.copy(
-                                            location = "Ubicación GPS (${String.format(Locale.US, "%.4f, %.4f", lat, lng)})"
-                                        )
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            withContext(Dispatchers.Main) {
-                                if (!_uiState.value.isCustomLocation) {
-                                    _uiState.value = _uiState.value.copy(
-                                        location = "San Juan de Lurigancho, Lima (GPS)"
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        location = "San Juan de Lurigancho, Lima"
-                    )
-                }
+                val locResult = DeviceLocationProvider.getBestLocation(app)
+                _uiState.value = _uiState.value.copy(
+                    latitude = locResult.latitude,
+                    longitude = locResult.longitude,
+                    location = locResult.address,
+                    isGpsActive = locResult.isExactGps
+                )
             } catch (e: Exception) {
-                Log.w("REPORT_VM", "Error al leer sensor GPS: ${e.message}")
-                _uiState.value = _uiState.value.copy(location = "San Juan de Lurigancho, Lima")
+                Log.w("REPORT_VM", "Error al obtener ubicación de dispositivo: ${e.message}")
             }
-        } else {
-            _uiState.value = _uiState.value.copy(location = "San Juan de Lurigancho, Lima")
         }
     }
 
@@ -150,25 +94,15 @@ class ReportViewModel @JvmOverloads constructor(
             hasDraftSaved = true
         )
 
-        // Si el usuario escribe una ubicación personalizada (ej. "UPN SJL"), intentar geocodificarla
-        if (newLocation.length >= 3) {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val app = getApplication<Application>()
-                    val geocoder = Geocoder(app, Locale.getDefault())
-                    val query = "$newLocation, San Juan de Lurigancho, Lima, Perú"
-                    val results = geocoder.getFromLocationName(query, 1)
-                    if (!results.isNullOrEmpty()) {
-                        val match = results[0]
-                        withContext(Dispatchers.Main) {
-                            _uiState.value = _uiState.value.copy(
-                                latitude = match.latitude,
-                                longitude = match.longitude
-                            )
-                        }
-                    }
-                } catch (e: Exception) {
-                    // Silencioso: mantiene las coordenadas actuales de GPS
+        // Si el usuario escribe una ubicación personalizada, geocodificarla en cualquier distrito de Lima
+        if (newLocation.trim().length >= 3) {
+            viewModelScope.launch {
+                val coords = DeviceLocationProvider.forwardGeocode(getApplication(), newLocation)
+                if (coords != null) {
+                    _uiState.value = _uiState.value.copy(
+                        latitude = coords.first,
+                        longitude = coords.second
+                    )
                 }
             }
         }

@@ -44,6 +44,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
+import com.limaenaccion.core.util.DeviceLocationProvider
 import com.limaenaccion.feature_alerts.data.model.Incident
 import com.limaenaccion.feature_alerts.data.model.IncidentType
 import kotlinx.coroutines.launch
@@ -121,56 +122,27 @@ fun RealGoogleMap(
     fun updateLocationFromDevice(forceAnimate: Boolean = false) {
         if (!checkHasFine() && !checkHasCoarse()) return
 
-        try {
-            val fusedClient = LocationServices.getFusedLocationProviderClient(context)
-            fusedClient.lastLocation.addOnSuccessListener { loc: Location? ->
-                if (loc != null && loc.latitude != 0.0 && loc.longitude != 0.0) {
-                    val pt = LatLng(loc.latitude, loc.longitude)
+        coroutineScope.launch {
+            try {
+                val best = DeviceLocationProvider.getBestLocation(context)
+                if (best.isExactGps || best.latitude != DeviceLocationProvider.DEFAULT_LIMA_LAT) {
+                    val pt = LatLng(best.latitude, best.longitude)
                     userLatLng = pt
                     if (!hasCenteredOnUser || forceAnimate) {
                         hasCenteredOnUser = true
-                        coroutineScope.launch {
-                            try {
-                                cameraPositionState.animate(
-                                    CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
-                                    800
-                                )
-                            } catch (_: Exception) {}
-                        }
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
+                            800
+                        )
                     }
                 }
-            }.addOnFailureListener {
-                // Fallback a LocationManager clásico
-                try {
-                    val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-                    val lastGps = if (checkHasFine()) lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER) else null
-                    val lastNet = if (checkHasCoarse() || checkHasFine()) lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) else null
-                    val best = when {
-                        lastGps != null && lastNet != null -> if (lastGps.time >= lastNet.time) lastGps else lastNet
-                        lastGps != null -> lastGps
-                        else -> lastNet
-                    }
-                    if (best != null && best.latitude != 0.0 && best.longitude != 0.0) {
-                        val pt = LatLng(best.latitude, best.longitude)
-                        userLatLng = pt
-                        if (!hasCenteredOnUser || forceAnimate) {
-                            hasCenteredOnUser = true
-                            coroutineScope.launch {
-                                try {
-                                    cameraPositionState.animate(
-                                        CameraUpdateFactory.newLatLngZoom(pt, 16.5f),
-                                        800
-                                    )
-                                } catch (_: Exception) {}
-                            }
-                        }
-                    }
-                } catch (err: Exception) {
-                    Log.w("GOOGLE_MAPS", "Error en fallback LocationManager: ${err.message}")
-                }
+            } catch (e: Exception) {
+                Log.w("GOOGLE_MAPS", "Error al centrar en usuario: ${e.message}")
             }
+        }
 
-            // Escucha periódica de GPS
+        try {
+            // Escucha periódica de GPS para cuando el usuario se desplace
             val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             val listener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
