@@ -1,6 +1,7 @@
 package com.limaenaccion.core.data.network.model
 
 data class CreateReportRequest(
+    val id: String? = null,
     val tipo: String,
     val titulo: String,
     val descripcion: String,

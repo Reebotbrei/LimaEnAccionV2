@@ -127,27 +127,32 @@ module.exports = {
     },
 
     guardarNuevo: async (nuevoReporte) => {
-        // 1. Guardar localmente en disco
+        // 1. Guardar localmente en disco (evitando duplicar si ya existe el ID)
         const reportes = leerReportesDesdeDisco();
-        reportes.unshift(nuevoReporte);
+        const existingIndex = reportes.findIndex(r => r.id === nuevoReporte.id);
+        if (existingIndex >= 0) {
+            reportes[existingIndex] = { ...reportes[existingIndex], ...nuevoReporte };
+        } else {
+            reportes.unshift(nuevoReporte);
+        }
         guardarReportesEnDisco(reportes);
 
-        // 2. Sincronizar en Firebase Firestore
+        // 2. Sincronizar en Firebase Firestore mediante UPSERT (PATCH)
         try {
             const docId = nuevoReporte.id || `rep_${Date.now()}`;
-            const url = `${FIRESTORE_BASE_URL}?documentId=${encodeURIComponent(docId)}&key=${FIRESTORE_API_KEY}`;
+            const url = `${FIRESTORE_BASE_URL}/${encodeURIComponent(docId)}?key=${FIRESTORE_API_KEY}`;
             const body = { fields: reporteToFirestoreFields(nuevoReporte) };
 
             const res = await fetch(url, {
-                method: 'POST',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
 
             if (res.ok) {
-                console.log(`[REPORTES SYNC] ✅ Reporte persistido en Firebase Firestore: ${docId}`);
+                console.log(`[REPORTES SYNC] ✅ Reporte persistido en Firebase Firestore (UPSERT): ${docId}`);
             } else {
-                console.warn(`[REPORTES SYNC] ⚠️ Firestore POST status ${res.status}`);
+                console.warn(`[REPORTES SYNC] ⚠️ Firestore PATCH status ${res.status}`);
             }
         } catch (e) {
             console.error(`[REPORTES SYNC] Error al registrar reporte en Firestore:`, e.message);

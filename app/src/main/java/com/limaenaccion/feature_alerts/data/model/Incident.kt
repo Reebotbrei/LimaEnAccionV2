@@ -39,5 +39,6 @@ data class Incident(
     val isReportedAsFalse: Boolean = false,
     val falseReportsCount: Int = 0,
     val latitude: Double = -12.019542,
-    val longitude: Double = -77.014231
+    val longitude: Double = -77.014231,
+    val timestamp: Long = System.currentTimeMillis()
 )

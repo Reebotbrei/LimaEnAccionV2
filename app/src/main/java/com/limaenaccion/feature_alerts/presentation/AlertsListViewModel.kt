@@ -104,34 +104,61 @@ class AlertsListViewModel @JvmOverloads constructor(
                 val radius = preferencesRepository.alertRadiusMeters.first()
                 val allowedTypes = preferencesRepository.incidentTypesFilter.first()
 
-                // Filtrar según tipos permitidos (Pref #9)
-                val typeFiltered = cachedAllIncidents.filter { incident ->
-                    allowedTypes.isEmpty() || allowedTypes.contains(incident.type.name)
-                }
+                // Filtrar según tipos permitidos (Pref #9) y deduplicar
+                val typeFiltered = cachedAllIncidents
+                    .deduplicar()
+                    .filter { incident ->
+                        allowedTypes.isEmpty() || allowedTypes.contains(incident.type.name)
+                    }
 
-                // Filtrar y ordenar según la pestaña activa
+                // Filtrar y ordenar según la pestaña activa: los últimos reportes siempre salen arriba
                 val finalList = when (_selectedTab.value) {
                     AlertFeedTab.CERCA_DE_TI -> {
-                        // Pref #8 (Radio de distancia activo) ordenado estrictamente por proximidad
+                        // Dentro del radio de proximidad configurado, los más recientes primero
                         typeFiltered
                             .filter { it.distanceMeters <= radius }
-                            .sortedBy { it.distanceMeters }
+                            .sortedWith(
+                                compareByDescending<Incident> { it.timestamp }
+                                    .thenBy { it.distanceMeters }
+                            )
                     }
                     AlertFeedTab.RECIENTES -> {
-                        // Ordenar por vigencia y estado: Activos y En atención primero
+                        // Pestaña 'Recientes': Orden cronológico estricto con los más nuevos arriba
                         typeFiltered.sortedWith(
-                            compareBy(
-                                { it.incidentStatus == IncidentStatus.RESUELTO },
-                                { it.distanceMeters }
-                            )
+                            compareByDescending<Incident> { it.timestamp }
+                                .thenBy { it.distanceMeters }
                         )
                     }
                 }
 
                 _uiState.value = UiState.Success(finalList)
             } catch (e: Exception) {
-                _uiState.value = UiState.Success(cachedAllIncidents)
+                _uiState.value = UiState.Success(cachedAllIncidents.deduplicar())
             }
         }
+    }
+
+    private fun List<Incident>.deduplicar(): List<Incident> {
+        val result = mutableListOf<Incident>()
+        for (incident in this) {
+            val index = result.indexOfFirst { exist ->
+                exist.id == incident.id || (
+                    exist.type == incident.type &&
+                    exist.reportedBy == incident.reportedBy &&
+                    exist.title == incident.title &&
+                    Math.abs(exist.latitude - incident.latitude) < 0.001 &&
+                    Math.abs(exist.longitude - incident.longitude) < 0.001 &&
+                    Math.abs(exist.timestamp - incident.timestamp) < 10 * 60 * 1000L
+                )
+            }
+            if (index >= 0) {
+                if (incident.photoBase64 != null && result[index].photoBase64 == null) {
+                    result[index] = incident
+                }
+            } else {
+                result.add(incident)
+            }
+        }
+        return result
     }
 }

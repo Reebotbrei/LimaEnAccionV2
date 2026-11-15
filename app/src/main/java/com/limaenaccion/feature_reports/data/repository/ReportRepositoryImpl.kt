@@ -74,6 +74,7 @@ class ReportRepositoryImpl(
         // 2. Persistencia remota en el Backend (Node.js por Retrofit)
         try {
             val request = CreateReportRequest(
+                id = reporteIdFinal,
                 tipo = tipoStr,
                 titulo = title,
                 descripcion = description,

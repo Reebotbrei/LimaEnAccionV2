@@ -112,8 +112,33 @@ class IncidentRepositoryImpl(
             isReportedAsFalse = false,
             falseReportsCount = 0,
             latitude = entity.latitud,
-            longitude = entity.longitud
+            longitude = entity.longitud,
+            timestamp = entity.creadoEn
         )
+    }
+
+    private fun List<Incident>.deduplicar(): List<Incident> {
+        val result = mutableListOf<Incident>()
+        for (incident in this) {
+            val index = result.indexOfFirst { exist ->
+                exist.id == incident.id || (
+                    exist.type == incident.type &&
+                    exist.reportedBy == incident.reportedBy &&
+                    exist.title == incident.title &&
+                    Math.abs(exist.latitude - incident.latitude) < 0.001 &&
+                    Math.abs(exist.longitude - incident.longitude) < 0.001 &&
+                    Math.abs(exist.timestamp - incident.timestamp) < 10 * 60 * 1000L
+                )
+            }
+            if (index >= 0) {
+                if (incident.photoBase64 != null && result[index].photoBase64 == null) {
+                    result[index] = incident
+                }
+            } else {
+                result.add(incident)
+            }
+        }
+        return result
     }
 
     override fun observeIncidents(): Flow<List<Incident>> = callbackFlow {
@@ -121,7 +146,10 @@ class IncidentRepositoryImpl(
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val ahora = System.currentTimeMillis()
-                val locales = reporteDao.obtenerListaVigentes(ahora).map { entityToIncident(it) }
+                val locales = reporteDao.obtenerListaVigentes(ahora)
+                    .map { entityToIncident(it) }
+                    .deduplicar()
+                    .sortedByDescending { it.timestamp }
                 trySend(locales)
             } catch (e: Exception) {
                 Log.e("INCIDENT_REPO", "Error al leer caché inicial SQLite: ${e.message}")
@@ -216,7 +244,8 @@ class IncidentRepositoryImpl(
                                 isReportedAsFalse = falseReportsCount >= 3,
                                 falseReportsCount = falseReportsCount,
                                 latitude = latitud,
-                                longitude = longitud
+                                longitude = longitud,
+                                timestamp = creadoEn
                             )
                             realIncidents.add(incident)
                         } catch (e: Exception) {
@@ -228,15 +257,16 @@ class IncidentRepositoryImpl(
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             if (remoteEntities.isNotEmpty()) {
-                                reporteDao.insertarTodos(remoteEntities)
+                                reporteDao.insertarTodos(remoteEntities.distinctBy { it.id })
                             }
                         } catch (e: Exception) {
                             Log.e("INCIDENT_REPO", "Error al guardar en Room: ${e.message}")
                         }
                     }
 
-                    Log.d("INCIDENT_REPO", "🔥 [TIEMPO REAL] Emitiendo ${realIncidents.size} reportes desde Firebase Firestore")
-                    trySend(realIncidents)
+                    val deduplicados = realIncidents.deduplicar().sortedByDescending { it.timestamp }
+                    Log.d("INCIDENT_REPO", "🔥 [TIEMPO REAL] Emitiendo ${deduplicados.size} reportes únicos desde Firebase Firestore")
+                    trySend(deduplicados)
                 }
             }
 
@@ -321,7 +351,10 @@ class IncidentRepositoryImpl(
             emptyList()
         }
 
-        val realIncidents = reportesLocales.map { entityToIncident(it) }
+        val realIncidents = reportesLocales
+            .map { entityToIncident(it) }
+            .deduplicar()
+            .sortedByDescending { it.timestamp }
         realIncidents
     }
 
@@ -368,7 +401,8 @@ class IncidentRepositoryImpl(
                     commentsCount = 0,
                     isVerifiedByAuthority = false,
                     latitude = latitud,
-                    longitude = longitud
+                    longitude = longitud,
+                    timestamp = creadoEn
                 )
             }
         } catch (e: Exception) {

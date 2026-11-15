@@ -21,7 +21,7 @@ exports.listarReportes = async (req, res) => {
 // POST /api/v1/reportes - Registra y persiste un nuevo reporte en Firestore y disco
 exports.crearReporte = async (req, res) => {
     try {
-        const { tipo, titulo, descripcion, latitud, longitud, fotoUrl, esSos, usuarioId, usuarioNombre, esAnonimo } = req.body;
+        const { id, tipo, titulo, descripcion, latitud, longitud, fotoUrl, esSos, usuarioId, usuarioNombre, esAnonimo } = req.body;
 
         if (!tipo) {
             return res.status(400).json({
@@ -41,9 +41,10 @@ exports.crearReporte = async (req, res) => {
         const esAnonimoBool = Boolean(esAnonimo);
         const autorId = esAnonimoBool ? "anonimo" : (usuarioId || req.headers['x-user-id'] || "vecino@limaenaccion.pe");
         const autorNombre = esAnonimoBool ? "Vecino Anónimo" : (usuarioNombre || "Vecino de Lima");
+        const idFinal = id || req.body._id || `rep_${Date.now()}`;
 
         const nuevoReporte = {
-            id: `rep_${Date.now()}`,
+            id: idFinal,
             usuarioId: autorId,
             usuarioNombre: autorNombre,
             esAnonimo: esAnonimoBool,

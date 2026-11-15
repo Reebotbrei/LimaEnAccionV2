@@ -74,4 +74,44 @@ class CivicFeedUnitTest {
         val flagged = incident.copy(isReportedAsFalse = true)
         assertTrue(flagged.isReportedAsFalse)
     }
+
+    @Test
+    fun testLatestIncidentsSortedFirst() {
+        val oldIncident = Incident(
+            id = "rep_100",
+            type = IncidentType.ROBO,
+            title = "Alerta antigua",
+            description = "Descripción",
+            reportedBy = "Vecino A",
+            location = "SJL",
+            distanceMeters = 100,
+            reportedAt = "15 min",
+            status = "Reportado",
+            mapX = 0.5f,
+            mapY = 0.5f,
+            timestamp = 1000L
+        )
+
+        val newIncident = Incident(
+            id = "rep_200",
+            type = IncidentType.ACCIDENTE,
+            title = "Alerta reciente",
+            description = "Descripción reciente",
+            reportedBy = "Vecino B",
+            location = "SJL",
+            distanceMeters = 500,
+            reportedAt = "ahora",
+            status = "Reportado",
+            mapX = 0.5f,
+            mapY = 0.5f,
+            timestamp = 5000L
+        )
+
+        val list = listOf(oldIncident, newIncident)
+        val sorted = list.sortedByDescending { it.timestamp }
+
+        assertEquals("rep_200", sorted.first().id)
+        assertEquals("ahora", sorted.first().reportedAt)
+        assertEquals("rep_100", sorted.last().id)
+    }
 }
