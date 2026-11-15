@@ -1,6 +1,11 @@
 package com.limaenaccion.main
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -10,12 +15,16 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -43,7 +52,24 @@ fun MainScreen(
 ) {
     val innerNavController = rememberNavController()
     val strings = LocalAppStrings.current
+    val context = LocalContext.current
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+    var showNotificationRationale by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* resultado procesado */ }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val isGranted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!isGranted) {
+                showNotificationRationale = true
+            }
+        }
+    }
 
     // Intercepta la flecha atrás del celular en la pantalla principal para evitar salir abruptamente
     BackHandler(enabled = true) {
@@ -69,6 +95,48 @@ fun MainScreen(
             dismissButton = {
                 TextButton(onClick = { showLogoutConfirmDialog = false }) {
                     Text(strings.cancelBtn)
+                }
+            }
+        )
+    }
+
+    // Diálogo explicativo (Rationale) para el permiso de Notificaciones (Android 13+)
+    if (showNotificationRationale) {
+        AlertDialog(
+            onDismissRequest = { showNotificationRationale = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "Activar Alertas y Notificaciones",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Lima en Acción requiere permiso para notificarte sobre emergencias vecinales cercanas, activaciones del Botón SOS y cambios en el estado de tus reportes."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showNotificationRationale = false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                ) {
+                    Text("Activar Notificaciones", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNotificationRationale = false }) {
+                    Text("Ahora no")
                 }
             }
         )

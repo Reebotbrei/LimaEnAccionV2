@@ -26,6 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +57,8 @@ fun ReportDetailsScreen(
     val strings = LocalAppStrings.current
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    var showCameraRationaleDialog by remember { mutableStateOf(false) }
+    var showCameraSettingsDialog by remember { mutableStateOf(false) }
 
     // Lanzador directo a la cámara real de Android
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -82,7 +87,7 @@ fun ReportDetailsScreen(
                 android.widget.Toast.makeText(context, "No se pudo abrir la cámara. Puedes usar la Galería.", android.widget.Toast.LENGTH_SHORT).show()
             }
         } else {
-            android.widget.Toast.makeText(context, "Se requiere permiso de cámara para tomar fotos de evidencia.", android.widget.Toast.LENGTH_SHORT).show()
+            showCameraSettingsDialog = true
         }
     }
 
@@ -393,7 +398,7 @@ fun ReportDetailsScreen(
                                     android.widget.Toast.makeText(context, "No se pudo abrir la cámara. Puedes adjuntar desde la Galería.", android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             } else {
-                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                showCameraRationaleDialog = true
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -501,5 +506,100 @@ fun ReportDetailsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    // Diálogo explicativo previo para solicitar el permiso de cámara (Rationale)
+    if (showCameraRationaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraRationaleDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.CameraAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "¿Permitir acceso a la cámara?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Lima en Acción necesita acceder a tu cámara para capturar la fotografía de evidencia del incidente. Esta foto servirá para que Serenazgo y la Policía verifiquen el reporte en tiempo real."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCameraRationaleDialog = false
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                ) {
+                    Text("Continuar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showCameraRationaleDialog = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo si el permiso fue denegado, con opción de ir a Ajustes o usar Galería
+    if (showCameraSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraSettingsDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(
+                    text = "Permiso de cámara requerido",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "No se pudo abrir la cámara porque el permiso no fue concedido. Puedes activarlo en los Ajustes de tu dispositivo o seleccionar una imagen desde tu Galería."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCameraSettingsDialog = false
+                        try {
+                            val intent = android.content.Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null)
+                            )
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(context, "Abre los Ajustes del dispositivo para conceder el permiso.", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }
+                ) {
+                    Text("Abrir Ajustes", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        showCameraSettingsDialog = false
+                        galleryLauncher.launch("image/*")
+                    }
+                ) {
+                    Text("Usar Galería")
+                }
+            }
+        )
     }
 }

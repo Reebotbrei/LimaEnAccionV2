@@ -29,13 +29,20 @@ fun LocationPermissionScreen(
     val context = LocalContext.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted -> viewModel.onPermissionResult(granted) }
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        viewModel.onPermissionResult(granted)
+    }
 
     LaunchedEffect(Unit) {
         val alreadyGranted = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
+
         if (alreadyGranted) {
             viewModel.onPermissionResult(true)
         }
@@ -53,22 +60,49 @@ fun LocationPermissionScreen(
                     onClick = {
                         val alreadyGranted = ContextCompat.checkSelfPermission(
                             context, Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.ACCESS_COARSE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
 
                         if (alreadyGranted) {
                             viewModel.onPermissionResult(true)
                         } else {
-                            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                            permissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
+                            )
                         }
                     }
                 )
                 if (uiState == LocationPermissionUiState.DENIED) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Necesitas conceder el permiso para continuar.",
+                        text = "El acceso a la ubicación es indispensable para posicionar denuncias urbanas y alertas de seguridad.",
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                val intent = android.content.Intent(
+                                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.fromParts("package", context.packageName, null)
+                                )
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Fallback
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Abrir Ajustes de la Aplicación")
+                    }
                 }
             }
         }
