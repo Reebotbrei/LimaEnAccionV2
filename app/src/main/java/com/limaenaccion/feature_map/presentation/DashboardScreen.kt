@@ -32,7 +32,7 @@ import com.limaenaccion.feature_alerts.presentation.IncidentCard
 import com.limaenaccion.feature_alerts.presentation.color
 import com.limaenaccion.feature_alerts.presentation.icon
 import com.limaenaccion.core.data.session.SessionManager
-import com.limaenaccion.feature_map.presentation.components.RealOsmMap
+import com.limaenaccion.feature_map.presentation.components.RealGoogleMap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +135,7 @@ fun DashboardScreen(
                 }
                 is UiState.Success -> {
                     if (uiState.viewMode == DashboardViewMode.MAP) {
-                        RealOsmMap(incidents = state.data, onPinClick = viewModel::onPinClick)
+                        RealGoogleMap(incidents = state.data, onPinClick = viewModel::onPinClick)
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
