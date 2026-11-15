@@ -2,6 +2,7 @@ package com.limaenaccion.feature_alerts.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -72,7 +73,10 @@ fun IncidentDetailScreen(
                     }
 
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Surface(shape = RoundedCornerShape(50), color = incident.type.color().copy(alpha = 0.15f)) {
                                 Text(
                                     incident.type.label.uppercase(),
@@ -80,7 +84,6 @@ fun IncidentDetailScreen(
                                     color = incident.type.color(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold
                                 )
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
 
                             val (badgeBg, badgeFg) = when (incident.incidentStatus) {
                                 IncidentStatus.REPORTADO -> Color(0xFFD97706).copy(alpha = 0.16f) to Color(0xFFD97706)
@@ -94,7 +97,7 @@ fun IncidentDetailScreen(
                                     color = badgeFg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold
                                 )
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+
                             Text("· ${incident.distanceMeters}m", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
 

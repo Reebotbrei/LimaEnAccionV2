@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.limaenaccion.core.ui.components.UserAvatar
@@ -76,29 +77,33 @@ fun IncidentCard(
 
             // 2. Columna de contenido
             Column(modifier = Modifier.weight(1f)) {
-                // Fila 1: Nombre, insignia oficial, @handle y tiempo
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                // Fila 1: Nombre, insignia oficial, @handle y tiempo (100% Responsivo con FlowRow)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = incident.reportedBy,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    if (incident.isOfficial) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Cuenta Oficial Verificada",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = incident.reportedBy,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+
+                        if (incident.isOfficial) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "Cuenta Oficial Verificada",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = incident.handle,
                         style = MaterialTheme.typography.bodyMedium,
@@ -106,18 +111,20 @@ fun IncidentCard(
                     )
 
                     Text(
-                        text = " · ${incident.reportedAt}",
+                        text = "· ${incident.reportedAt}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Fila 2: Pill de Categoría + Distancia + BADGE DE ESTADO DEL INCIDENTE
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                // Fila 2: Pill de Categoría + Distancia + BADGE DE ESTADO DEL INCIDENTE (Responsivo)
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     // Categoría
@@ -141,8 +148,6 @@ fun IncidentCard(
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
-
-                    Spacer(modifier = Modifier.weight(1f))
 
                     // Badge de Estado del Incidente (🟡 Reportado | 🔵 En atención | 🟢 Resuelto)
                     val (statusBg, statusFg) = when (incident.incidentStatus) {
